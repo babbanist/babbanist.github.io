@@ -1,1 +1,166 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
+  --bg: #f5f0e8;
+  --ink: #1a1410;
+  --muted: #8a7f72;
+  --accent: #c84b2f;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'DM Mono', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  cursor: none;
+}
+
+/* Custom cursor */
+.cursor {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+}
+
+.cursor.expanded {
+  width: 32px;
+  height: 32px;
+  opacity: 0.5;
+}
+
+/* Grain overlay */
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px;
+  z-index: 10;
+  animation: grainShift 8s steps(1) infinite;
+}
+
+@keyframes grainShift {
+  0%  { background-position: 0 0; }
+  10% { background-position: -5% -10%; }
+  20% { background-position: -15% 5%; }
+  30% { background-position: 7% -15%; }
+  40% { background-position: -5% 20%; }
+  50% { background-position: -20% 10%; }
+  60% { background-position: 15% 5%; }
+  70% { background-position: 0% 15%; }
+  80% { background-position: 3% 35%; }
+  90% { background-position: -10% 10%; }
+}
+
+/* Staggered entrance - each element starts hidden */
+[data-stagger] {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+[data-stagger].visible {
+  animation: appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes appear {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+main {
+  max-width: 480px;
+  width: 100%;
+}
+
+.label {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.2rem;
+}
+
+h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(2.8rem, 8vw, 4.5rem);
+  line-height: 1.0;
+  margin-bottom: 1.6rem;
+  letter-spacing: -0.02em;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--accent);
+  display: inline-block;
+}
+
+p {
+  font-size: 0.85rem;
+  line-height: 1.75;
+  color: var(--muted);
+  margin-bottom: 2.4rem;
+  max-width: 360px;
+}
+
+.links {
+  display: flex;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+}
+
+.links a {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 2px;
+  transition: color 0.2s, border-color 0.2s;
+  display: inline-block;
+  position: relative;
+}
+
+.links a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Divider grows from left */
+.divider {
+  width: 2rem;
+  height: 1px;
+  background: var(--accent);
+  margin: 2rem 0;
+  transform-origin: left center;
+}
+
+.divider[data-stagger].visible {
+  animation: dividerGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes dividerGrow {
+  from { opacity: 1; transform: scaleX(0) translateY(0); }
+  to   { opacity: 1; transform: scaleX(1) translateY(0); }
+}
+
+footer {
+  margin-top: 4rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
