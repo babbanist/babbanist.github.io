@@ -72,16 +72,8 @@ function launchFloatingImage() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // Random size: smallish but with some variation
   const size = 90 + Math.random() * 90; // 90–180px
-
-  // Pick a start edge (0=top 1=right 2=bottom 3=left)
-  const startEdge = Math.floor(Math.random() * 4);
-  // End edge: prefer roughly opposite but allow ±1 shift for diagonal feel
-  const shift = Math.random() < 0.6 ? 2 : (Math.random() < 0.5 ? 1 : 3);
-  const endEdge = (startEdge + shift) % 4;
-
-  const margin = size + 30;
+  const margin = size + 40;
 
   function edgePoint(edge) {
     switch (edge) {
@@ -92,67 +84,59 @@ function launchFloatingImage() {
     }
   }
 
-  const start = edgePoint(startEdge);
-  const end   = edgePoint(endEdge);
+  const startEdge = Math.floor(Math.random() * 4);
+  const shift     = Math.random() < 0.6 ? 2 : (Math.random() < 0.5 ? 1 : 3);
+  const endEdge   = (startEdge + shift) % 4;
 
-  // Gentle rotation: slow, max ~1.5 rotations total
+  const start    = edgePoint(startEdge);
+  const end      = edgePoint(endEdge);
   const startRot = (Math.random() - 0.5) * 30;
   const endRot   = startRot + (Math.random() < 0.5 ? 1 : -1) * (60 + Math.random() * 90);
-
-  // Slow travel: 7–15s
-  const duration = 7000 + Math.random() * 8000;
+  const duration = 7000 + Math.random() * 8000; // 7–15s
 
   const img = document.createElement('img');
   img.src = 'IMG_4721.jpeg';
   img.setAttribute('aria-hidden', 'true');
-  img.style.cssText = [
-    'position:fixed',
-    'left:0', 'top:0',
-    `width:${size}px`,
-    'height:auto',
-    'pointer-events:none',
-    'z-index:6',
-    'border-radius:3px',
-    'will-change:transform,opacity',
-  ].join(';');
+  img.style.cssText = `
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: ${size}px;
+    height: auto;
+    pointer-events: none;
+    z-index: 6;
+    border-radius: 3px;
+    opacity: 0;
+    transform: translate(${start.x}px, ${start.y}px) rotate(${startRot}deg);
+    transition:
+      transform ${duration}ms cubic-bezier(0.25, 0.1, 0.25, 1),
+      opacity 1s ease;
+  `;
 
   document.body.appendChild(img);
 
-  img.animate([
-    {
-      transform: `translate(${start.x}px,${start.y}px) rotate(${startRot}deg)`,
-      opacity: 0,
-    },
-    {
-      transform: `translate(${start.x + (end.x - start.x) * 0.08}px,${start.y + (end.y - start.y) * 0.08}px) rotate(${startRot + (endRot - startRot) * 0.08}deg)`,
-      opacity: 0.88,
-      offset: 0.08,
-    },
-    {
-      transform: `translate(${start.x + (end.x - start.x) * 0.92}px,${start.y + (end.y - start.y) * 0.92}px) rotate(${startRot + (endRot - startRot) * 0.92}deg)`,
-      opacity: 0.88,
-      offset: 0.92,
-    },
-    {
-      transform: `translate(${end.x}px,${end.y}px) rotate(${endRot}deg)`,
-      opacity: 0,
-    },
-  ], {
-    duration,
-    easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
-    fill: 'forwards',
-  }).onfinish = () => {
+  // Force reflow so the starting state is painted before transition begins
+  void img.offsetWidth;
+
+  // Kick off the slide + fade-in
+  img.style.transform = `translate(${end.x}px, ${end.y}px) rotate(${endRot}deg)`;
+  img.style.opacity   = '0.9';
+
+  // Fade out near the end
+  setTimeout(() => {
+    img.style.opacity = '0';
+  }, duration - 1000);
+
+  // Clean up and schedule next
+  setTimeout(() => {
     img.remove();
-    scheduleFloatingImage();
-  };
+    const nextDelay = 5000 + Math.random() * 15000; // 5–20s
+    setTimeout(launchFloatingImage, nextDelay);
+  }, duration + 200);
 }
 
-function scheduleFloatingImage() {
-  const delay = 5000 + Math.random() * 15000; // 5–20s
-  setTimeout(launchFloatingImage, delay);
-}
-
-scheduleFloatingImage();
+// First image appears after a short pause on load
+setTimeout(launchFloatingImage, 1500);
 
 
 /* ─── Accent em pulse on load ───────────────────────────────── */
