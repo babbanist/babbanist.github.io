@@ -1,25 +1,189 @@
 <!DOCTYPE html>
-
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>babbanist</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital@0;1&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #f5f0e8;
+      --ink:    #1a1410;
+      --muted:  #8a7f72;
+      --accent: #c84b2f;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background-color: #f5f0e8;
+      background-color: var(--bg);
+      color: #1a1410;
+      color: var(--ink);
+      font-family: 'DM Mono', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+      cursor: none;
+    }
+
+    /* ── Grain ──────────────────────────────────────────────────── */
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px;
+      z-index: 10;
+      animation: grainShift 8s steps(1) infinite;
+    }
+
+    @keyframes grainShift {
+      0%  { background-position:   0%   0%; }
+      10% { background-position:  -5% -10%; }
+      20% { background-position: -15%   5%; }
+      30% { background-position:   7% -15%; }
+      40% { background-position:  -5%  20%; }
+      50% { background-position: -20%  10%; }
+      60% { background-position:  15%   5%; }
+      70% { background-position:   0%  15%; }
+      80% { background-position:   3%  35%; }
+      90% { background-position: -10%  10%; }
+    }
+
+    /* ── Custom cursor ──────────────────────────────────────────── */
+    .cursor {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: #c84b2f;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+    }
+
+    .cursor.expanded {
+      width: 28px;
+      height: 28px;
+      opacity: 0.45;
+    }
+
+    /* ── Staggered entrance ─────────────────────────────────────── */
+    [data-stagger] {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    [data-stagger].visible {
+      animation: appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes appear {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    main {
+      max-width: 480px;
+      width: 100%;
+    }
+
+    /* ── Label with blur effect ─────────────────────────────────── */
+    .label-wrap {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 1.2rem;
+    }
+
+    .label {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8a7f72;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .label-blurred {
+      position: absolute;
+      inset: 0;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8a7f72;
+      color: var(--muted);
+      filter: blur(5px);
+      pointer-events: none;
+      -webkit-mask-image: radial-gradient(circle 55px at var(--mx, -200px) var(--my, -200px), black 0%, transparent 80%);
+              mask-image: radial-gradient(circle 55px at var(--mx, -200px) var(--my, -200px), black 0%, transparent 80%);
+    }
+
+    /* ── Heading ────────────────────────────────────────────────── */
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.8rem, 8vw, 4.5rem);
+      line-height: 1.05;
+      margin-bottom: 1.6rem;
+      letter-spacing: -0.02em;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: #c84b2f;
+      color: var(--accent);
+      display: inline-block;
+    }
+
+    /* ── Divider ────────────────────────────────────────────────── */
+    .divider {
+      width: 2rem;
+      height: 1px;
+      background: #c84b2f;
+      background: var(--accent);
+      margin: 2rem 0;
+      transform-origin: left center;
+    }
+
+    .divider[data-stagger].visible {
+      animation: dividerGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes dividerGrow {
+      from { opacity: 1; transform: scaleX(0) translateY(0); }
+      to   { opacity: 1; transform: scaleX(1) translateY(0); }
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    footer {
+      margin-top: 4rem;
+      font-size: 0.68rem;
+      color: #8a7f72;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+  </style>
 </head>
 <body>
   <div class="grain"></div>
   <div class="cursor"></div>
   <main>
-    <p class="label" data-stagger="0">babbanist.github.io</p>
-    <h1 data-stagger="1">Hoi, ik ben <em>babbanist.</em></h1>
+    <div class="label-wrap" data-stagger="0">
+      <p class="label">babbanist.github.io</p>
+      <p class="label label-blurred" aria-hidden="true">babbanist.github.io</p>
+    </div>
+    <h1 data-stagger="1">Gegroet, ik ben<br><em>De Babbanist</em></h1>
     <div class="divider" data-stagger="2"></div>
-    <p data-stagger="3">Dit is mijn kleine plek op het internet. Meer komt nog.</p>
-    <nav class="links" data-stagger="4">
-      <a href="https://github.com/babbanist" target="_blank" class="magnetic-link">GitHub</a>
-    </nav>
-    <footer data-stagger="5">© 2025 babbanist</footer>
+    <footer data-stagger="3">© 2026 babbanist</footer>
   </main>
   <script src="script.js"></script>
 </body>

@@ -11,118 +11,68 @@ document.addEventListener('mousemove', (e) => {
   mouseY = e.clientY;
 });
 
-// Smooth cursor follow with lerp
-function lerpCursor() {
+(function lerpCursor() {
   curX += (mouseX - curX) * 0.18;
   curY += (mouseY - curY) * 0.18;
   cursor.style.left = curX + 'px';
   cursor.style.top  = curY + 'px';
   requestAnimationFrame(lerpCursor);
-}
-lerpCursor();
+})();
 
-// Expand cursor on hoverable elements
-document.querySelectorAll('a, button').forEach(el => {
-  el.addEventListener('mouseenter', () => cursor.classList.add('expanded'));
-  el.addEventListener('mouseleave', () => cursor.classList.remove('expanded'));
-});
-
-// Hide cursor when it leaves the window
 document.addEventListener('mouseleave', () => { cursor.style.opacity = '0'; });
 document.addEventListener('mouseenter', () => { cursor.style.opacity = '1'; });
 
 
 /* ─── Staggered entrance ────────────────────────────────────── */
-const staggerEls = document.querySelectorAll('[data-stagger]');
-
-staggerEls.forEach(el => {
-  const delay = parseInt(el.dataset.stagger, 10) * 120 + 80; // ms per step
+document.querySelectorAll('[data-stagger]').forEach(el => {
+  const delay = parseInt(el.dataset.stagger, 10) * 130 + 80;
   setTimeout(() => el.classList.add('visible'), delay);
 });
 
 
-/* ─── Magnetic links ────────────────────────────────────────── */
-document.querySelectorAll('.magnetic-link').forEach(link => {
-  const strength = 0.35;
+/* ─── Label blur effect ─────────────────────────────────────── */
+const labelWrap   = document.querySelector('.label-wrap');
+const labelBlur   = document.querySelector('.label-blurred');
 
-  link.addEventListener('mousemove', (e) => {
-    const rect = link.getBoundingClientRect();
-    const cx = rect.left + rect.width  / 2;
-    const cy = rect.top  + rect.height / 2;
-    const dx = (e.clientX - cx) * strength;
-    const dy = (e.clientY - cy) * strength;
-    link.style.transform = `translate(${dx}px, ${dy}px)`;
+if (labelWrap && labelBlur) {
+  labelWrap.addEventListener('mousemove', (e) => {
+    const rect = labelWrap.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    labelWrap.style.setProperty('--mx', x + 'px');
+    labelWrap.style.setProperty('--my', y + 'px');
   });
 
-  link.addEventListener('mouseleave', () => {
-    link.style.transition = 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)';
-    link.style.transform  = 'translate(0, 0)';
-    setTimeout(() => { link.style.transition = ''; }, 400);
+  labelWrap.addEventListener('mouseleave', () => {
+    labelWrap.style.setProperty('--mx', '-200px');
+    labelWrap.style.setProperty('--my', '-200px');
   });
-});
-
-
-/* ─── Text scramble on h1 hover ─────────────────────────────── */
-const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
-
-function scramble(el, originalText, duration = 600) {
-  let start = null;
-  const totalChars = originalText.length;
-
-  function step(ts) {
-    if (!start) start = ts;
-    const progress = Math.min((ts - start) / duration, 1);
-    const revealedCount = Math.floor(progress * totalChars);
-
-    let result = '';
-    for (let i = 0; i < totalChars; i++) {
-      if (originalText[i] === ' ') { result += ' '; continue; }
-      if (i < revealedCount) {
-        result += originalText[i];
-      } else {
-        result += chars[Math.floor(Math.random() * chars.length)];
-      }
-    }
-    el.textContent = result;
-
-    if (progress < 1) requestAnimationFrame(step);
-    else el.textContent = originalText;
-  }
-
-  requestAnimationFrame(step);
 }
 
-const heading = document.querySelector('h1');
-const em = heading.querySelector('em');
-// We scramble only the plain-text portion of h1 (before the <em>)
-const labelEl = document.querySelector('.label');
-const originalLabel = labelEl.textContent;
 
-labelEl.addEventListener('mouseenter', () => {
-  scramble(labelEl, originalLabel);
-});
-
-
-/* ─── Subtle parallax on grain with mouse ───────────────────── */
+/* ─── Grain parallax ────────────────────────────────────────── */
 const grain = document.querySelector('.grain');
-let ticking = false;
+let grainTick = false;
 
 document.addEventListener('mousemove', (e) => {
-  if (!ticking) {
+  if (!grainTick) {
     requestAnimationFrame(() => {
       const xPct = (e.clientX / window.innerWidth  - 0.5) * 6;
       const yPct = (e.clientY / window.innerHeight - 0.5) * 6;
       grain.style.transform = `translate(${xPct}px, ${yPct}px)`;
-      ticking = false;
+      grainTick = false;
     });
-    ticking = true;
+    grainTick = true;
   }
 });
 
 
 /* ─── Accent em pulse on load ───────────────────────────────── */
-setTimeout(() => {
-  em.style.transition = 'transform 0.4s cubic-bezier(0.22,1,0.36,1)';
-  em.style.transform  = 'scale(1.04)';
-  setTimeout(() => { em.style.transform = 'scale(1)'; }, 400);
-}, staggerEls.length * 120 + 400);
+const em = document.querySelector('h1 em');
+if (em) {
+  setTimeout(() => {
+    em.style.transition = 'transform 0.4s cubic-bezier(0.22,1,0.36,1)';
+    em.style.transform  = 'scale(1.04)';
+    setTimeout(() => { em.style.transform = 'scale(1)'; }, 400);
+  }, 4 * 130 + 500);
+}
