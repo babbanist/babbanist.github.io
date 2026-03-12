@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Familie</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #090909; --surface: #0f0f11; --card: #131316; --card-hover: #17171b;
+  --border: #1e1e24; --border-light: #2a2a33; --text: #dddde8;
+  --muted: #55556a; --muted2: #3a3a4a; --white: #f0f0f8;
+  --ff-serif: 'Playfair Display', Georgia, serif;
+  --ff-mono: 'IBM Plex Mono', monospace;
+}
+body { background:var(--bg); color:var(--text); font-family:var(--ff-mono); min-height:100vh; padding:40px 20px 80px; overflow-x:hidden; }
+body::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse 100% 40% at 20% 0%,rgba(168,103,232,.04),transparent), radial-gradient(ellipse 80% 50% at 80% 100%,rgba(103,181,232,.03),transparent); pointer-events:none; z-index:0; }
+.wrap { max-width:1080px; margin:0 auto; position:relative; z-index:1; }
+
+.header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:40px; padding-bottom:24px; border-bottom:1px solid var(--border); }
+.header h1 { font-family:var(--ff-serif); font-size:2.8rem; font-weight:400; color:var(--white); letter-spacing:-.02em; line-height:1; }
+.header h1 em { font-style:italic; color:var(--muted); }
+.clock-block { text-align:right; }
+.clock-time { font-size:1.4rem; font-weight:500; color:var(--white); letter-spacing:.04em; font-variant-numeric:tabular-nums; }
+.clock-date { font-size:10px; color:var(--muted); letter-spacing:.12em; text-transform:uppercase; margin-top:4px; }
+
+.overview { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:24px; }
+.ov { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; animation:fadeUp .4s ease both; }
+.ov-label { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:6px; }
+.ov-value { font-size:13px; color:var(--white); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ov-sub { font-size:10px; color:var(--muted); margin-top:2px; }
+.ov.next { border-color:var(--next-color,var(--border)); }
+
+.spectrum-wrap { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px 24px 32px; margin-bottom:24px; }
+.spectrum-title { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:28px; }
+.spectrum { position:relative; height:52px; }
+.spectrum-axis { position:absolute; bottom:0; left:0; right:0; height:1px; background:var(--border); }
+.spectrum-dot { position:absolute; bottom:0; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+.spectrum-dot-circle { width:8px; height:8px; border-radius:50%; position:relative; bottom:-4px; transition:transform .2s; }
+.spectrum-dot:hover .spectrum-dot-circle { transform:scale(1.6); }
+.spectrum-dot-label { position:absolute; bottom:12px; font-size:10px; white-space:nowrap; font-weight:500; }
+.spectrum-dot-age { position:absolute; bottom:-20px; font-size:9px; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.spectrum-tick { position:absolute; bottom:0; transform:translateX(-50%); font-size:8px; color:var(--muted2); padding-bottom:6px; }
+.spectrum-tick::before { content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:1px; height:4px; background:var(--muted2); }
+
+.compare-wrap { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px 24px; margin-bottom:24px; }
+.compare-title { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+.compare-title:hover { color:var(--text); }
+.compare-toggle-icon { font-size:14px; color:var(--muted2); transition:transform .35s ease; line-height:1; }
+.compare-toggle-icon.open { transform:rotate(180deg); }
+.compare-body { overflow:hidden; max-height:600px; transition:max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s ease; opacity:1; }
+.compare-body.collapsed { max-height:0; opacity:0; }
+.compare-picker { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; }
+.cmp-chip { display:flex; align-items:center; gap:6px; border:1px solid var(--border-light); border-radius:20px; padding:6px 13px; cursor:pointer; font-family:var(--ff-mono); font-size:11px; color:var(--muted); background:var(--surface); transition:border-color .15s,color .15s,background .15s; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+.cmp-chip:hover { border-color:var(--muted); color:var(--text); }
+.cmp-chip.sel-1 { color:var(--white); background:var(--card-hover); }
+.cmp-chip.sel-2 { color:var(--white); background:var(--card-hover); }
+.cmp-chip.sel-3 { color:var(--white); background:var(--card-hover); }
+.cmp-chip-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.cmp-chip-badge { font-size:9px; font-weight:500; margin-left:1px; opacity:.7; }
+.cmp-hint { font-size:10px; color:var(--muted2); margin-bottom:12px; letter-spacing:.04em; }
+.compare-results { display:none; border-top:1px solid var(--border); padding-top:16px; }
+.compare-results.visible { display:block; }
+.compare-cols { display:grid; gap:0; }
+.compare-cols.two  { grid-template-columns:1fr auto 1fr; }
+.compare-cols.three { grid-template-columns:1fr auto 1fr auto 1fr; }
+.compare-side { padding:0 10px; }
+.compare-side-name { font-family:var(--ff-serif); font-size:1.1rem; color:var(--white); margin-bottom:10px; }
+.compare-stat { padding:5px 0; border-bottom:1px solid var(--border); }
+.compare-stat:last-child { border-bottom:none; }
+.compare-stat-label { font-size:9px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+.compare-stat-val { font-size:12px; color:var(--text); margin-top:1px; font-variant-numeric:tabular-nums; }
+.compare-middle { padding:0 12px; display:flex; flex-direction:column; align-items:center; border-left:1px solid var(--border); border-right:1px solid var(--border); }
+.compare-mid-item { text-align:center; padding:6px 0; width:100%; border-bottom:1px solid var(--border); }
+.compare-mid-item:last-child { border-bottom:none; }
+.compare-mid-label { font-size:9px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
+.compare-mid-val { font-size:11px; color:var(--white); margin-top:2px; font-weight:500; }
+.compare-mid-val.accent { color:#c8a97e; }
+.compare-combined { margin-top:14px; padding:14px 0 2px; border-top:1px solid var(--border); display:flex; gap:24px; flex-wrap:wrap; }
+.compare-combined-item { display:flex; flex-direction:column; gap:2px; }
+.compare-combined-label { font-size:9px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+.compare-combined-val { font-size:14px; color:#c8a97e; font-weight:500; font-variant-numeric:tabular-nums; }
+
+.section-label { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; }
+.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; position:relative; overflow:hidden; transition:border-color .25s,background .25s; animation:fadeUp .5s ease both; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.card:hover { background:var(--card-hover); }
+.card-topline { position:absolute; top:0; left:0; right:0; height:1px; opacity:.5; }
+.card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; }
+.card-name { font-family:var(--ff-serif); font-size:1.45rem; font-weight:400; color:var(--white); line-height:1; }
+.card-zodiac { font-size:16px; line-height:1; opacity:.7; }
+.card-dob { font-size:10px; color:var(--muted); margin-bottom:2px; letter-spacing:.06em; }
+.card-weekday { font-size:9px; color:var(--muted2); letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; }
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; margin-bottom:10px; }
+.stat { display:flex; flex-direction:column; gap:1px; }
+.stat-l { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+.stat-v { font-size:12px; color:var(--text); font-variant-numeric:tabular-nums; }
+.stat-v.big { font-size:14px; color:var(--white); font-weight:500; }
+.exact-time { font-size:10px; color:var(--muted); font-variant-numeric:tabular-nums; margin-bottom:10px; letter-spacing:.04em; }
+.exact-time span { color:var(--text); }
+.bd-block { background:rgba(255,255,255,.025); border:1px solid var(--border); border-radius:6px; padding:10px 12px; }
+.bd-label { font-size:9px; color:var(--muted); letter-spacing:.12em; text-transform:uppercase; margin-bottom:4px; }
+.bd-countdown { font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; margin-bottom:6px; }
+.bd-today { font-size:12px; color:#7ec880; font-weight:500; }
+.bd-bar { height:2px; background:var(--border); border-radius:2px; overflow:hidden; }
+.bd-fill { height:100%; border-radius:2px; }
+.bd-prog-label { display:flex; justify-content:space-between; margin-top:3px; font-size:9px; color:var(--muted2); }
+.card-hint { position:absolute; bottom:10px; right:12px; font-size:9px; color:var(--muted2); opacity:0; transition:opacity .2s; letter-spacing:.06em; pointer-events:none; }
+.card:hover .card-hint { opacity:1; }
+
+/* FULLSCREEN */
+.fs-overlay { position:fixed; inset:0; z-index:1000; display:none; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.fs-overlay.open { display:block; }
+.fs-bg { position:fixed; inset:0; background:rgba(5,5,7,.97); }
+.fs-content { position:relative; z-index:2; min-height:100vh; padding:48px 24px 100px; max-width:860px; margin:0 auto; }
+.fs-close { position:fixed; top:20px; right:20px; background:var(--card); border:1px solid var(--border); border-radius:50%; width:40px; height:40px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; z-index:10; font-family:sans-serif; -webkit-tap-highlight-color:transparent; }
+.fs-hero { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:36px; padding-bottom:24px; border-bottom:1px solid var(--border); gap:20px; flex-wrap:wrap; }
+.fs-name { font-family:var(--ff-serif); font-size:clamp(2.5rem,7vw,5rem); font-weight:400; color:var(--white); line-height:.95; margin-bottom:12px; }
+.fs-name em { font-style:italic; }
+.fs-meta { font-size:11px; color:var(--muted); letter-spacing:.08em; line-height:2; text-transform:uppercase; }
+.fs-age-hero { text-align:right; flex-shrink:0; }
+.fs-age-big { font-family:var(--ff-serif); font-size:clamp(2.5rem,5vw,4rem); line-height:1; }
+.fs-age-label { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-top:4px; }
+.fs-live-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:24px; }
+.fs-live-card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px; }
+.fs-live-label { font-size:9px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+.fs-live-val { font-size:1rem; color:var(--white); font-weight:500; font-variant-numeric:tabular-nums; }
+.fs-section { margin-bottom:22px; }
+.fs-section-title { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.fs-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.fs-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+.fs-item-label { font-size:9px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+.fs-item-val { font-size:13px; color:var(--white); font-variant-numeric:tabular-nums; }
+.fs-item-sub { font-size:10px; color:var(--muted2); margin-top:2px; }
+.fs-pulse-row { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+.pulse-dot { width:7px; height:7px; border-radius:50%; animation:pulse 1.4s ease-in-out infinite; flex-shrink:0; }
+.pulse-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+.pulse-val { font-size:12px; color:var(--white); font-variant-numeric:tabular-nums; }
+.bd-ring-wrap { display:flex; align-items:center; gap:20px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 20px; }
+.bd-ring { position:relative; width:76px; height:76px; flex-shrink:0; }
+.bd-ring svg { width:76px; height:76px; transform:rotate(-90deg); }
+.bd-ring-pct { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:500; color:var(--white); }
+.bd-ring-cd { font-size:.95rem; font-weight:500; font-variant-numeric:tabular-nums; margin-bottom:4px; }
+.bd-ring-sub { font-size:10px; color:var(--muted); line-height:1.7; }
+.funfacts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.funfact { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-size:11px; color:var(--muted); line-height:1.5; }
+.funfact strong { color:var(--white); display:block; margin-bottom:3px; font-size:12px; }
+.timeline { display:flex; flex-direction:column; }
+.tl-item { display:grid; grid-template-columns:56px 12px 1fr; gap:0 12px; align-items:stretch; }
+.tl-age { font-family:var(--ff-serif); font-size:1.2rem; text-align:right; padding:4px 0; opacity:.65; line-height:1.2; }
+.tl-line-wrap { display:flex; flex-direction:column; align-items:center; }
+.tl-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:8px; }
+.tl-line { width:1px; flex:1; background:var(--border); margin-top:2px; }
+.tl-item:last-child .tl-line { display:none; }
+.tl-body { padding:6px 0 18px; }
+.tl-title { font-size:12px; color:var(--white); font-weight:500; margin-bottom:2px; }
+.tl-date { font-size:10px; color:var(--muted); }
+.tl-future .tl-age { opacity:.2; }
+.tl-future .tl-title { color:var(--muted); }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.8);opacity:.4;} }
+
+/* TOUR BUTTON */
+.tour-btn { position:fixed; bottom:28px; right:24px; z-index:500; background:var(--card); border:1px solid var(--border-light); border-radius:24px; color:var(--muted); font-family:var(--ff-mono); font-size:11px; padding:10px 16px; cursor:pointer; display:flex; align-items:center; gap:8px; letter-spacing:.06em; transition:border-color .2s,color .2s,box-shadow .2s; -webkit-tap-highlight-color:transparent; }
+.tour-btn:hover { color:var(--white); border-color:var(--muted); box-shadow:0 0 20px rgba(255,255,255,.05); }
+.tour-btn-dot { width:6px; height:6px; border-radius:50%; background:#c8a97e; flex-shrink:0; }
+
+.tour-overlay { position:fixed; inset:0; z-index:2000; display:none; pointer-events:none; }
+.tour-overlay.open { display:block; pointer-events:all; }
+.tour-dim { position:fixed; inset:0; background:rgba(0,0,0,.75); }
+.tour-spotlight { position:fixed; border-radius:12px; box-shadow:0 0 0 9999px rgba(0,0,0,.75); border:1px solid rgba(255,255,255,.12); transition:all .35s cubic-bezier(.4,0,.2,1); pointer-events:none; z-index:2001; }
+.tour-card { position:fixed; z-index:2003; background:#191920; border:1px solid var(--border-light); border-radius:12px; padding:20px 22px; max-width:300px; min-width:220px; box-shadow:0 8px 40px rgba(0,0,0,.7); transition:top .35s cubic-bezier(.4,0,.2,1), left .35s cubic-bezier(.4,0,.2,1); }
+.tour-step-label { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:8px; }
+.tour-title { font-family:var(--ff-serif); font-size:1.1rem; color:var(--white); margin-bottom:8px; line-height:1.2; }
+.tour-body { font-size:11px; color:var(--muted); line-height:1.65; margin-bottom:16px; }
+.tour-body strong { color:var(--text); }
+.tour-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.tour-nav-btns { display:flex; gap:8px; }
+.tour-btn-nav { background:none; border:1px solid var(--border-light); border-radius:6px; color:var(--muted); font-family:var(--ff-mono); font-size:11px; padding:6px 12px; cursor:pointer; transition:border-color .15s,color .15s; }
+.tour-btn-nav:hover { border-color:var(--muted); color:var(--white); }
+.tour-btn-nav.primary { background:#c8a97e22; border-color:#c8a97e66; color:#c8a97e; }
+.tour-btn-nav.primary:hover { background:#c8a97e33; border-color:#c8a97e; }
+.tour-dots { display:flex; gap:5px; align-items:center; }
+.tour-dot { width:5px; height:5px; border-radius:50%; background:var(--muted2); transition:background .2s,transform .2s; }
+.tour-dot.active { background:#c8a97e; transform:scale(1.3); }
+.card:nth-child(1){animation-delay:.10s}
+.card:nth-child(2){animation-delay:.13s}
+.card:nth-child(3){animation-delay:.16s}
+.card:nth-child(4){animation-delay:.19s}
+.card:nth-child(5){animation-delay:.22s}
+.card:nth-child(6){animation-delay:.25s}
+
+@media(max-width:800px){
+  .cards{grid-template-columns:repeat(2,1fr);}
+  .overview{grid-template-columns:repeat(2,1fr);}
+  .compare-cols.three{grid-template-columns:1fr;}
+  .compare-middle{border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:8px 0;}
+}
+@media(max-width:520px){
+  .cards{grid-template-columns:1fr;}
+  .fs-live-strip{grid-template-columns:1fr 1fr;}
+  .fs-grid{grid-template-columns:1fr 1fr;}
+  .funfacts{grid-template-columns:1fr;}
+  .compare-cols.two{grid-template-columns:1fr;}
+  .compare-middle{border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:8px 0;}
+}
+
+/* HIDDEN PANEL */
+.hidden-panel { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:24px; display:none; }
+.hidden-panel.has-items { display:block; }
+.hidden-panel-title { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; }
+.hidden-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.hidden-chip { display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--border-light); border-radius:20px; padding:6px 12px 6px 10px; cursor:pointer; transition:border-color .2s; -webkit-tap-highlight-color:transparent; }
+.hidden-chip:hover { border-color:var(--muted); }
+.hidden-chip-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.hidden-chip-name { font-family:var(--ff-mono); font-size:11px; color:var(--text); }
+.hidden-chip-add { font-size:13px; color:var(--muted); line-height:1; }
+
+/* HIDE BUTTON ON CARD */
+.card-hide-btn { position:absolute; top:10px; right:10px; background:none; border:none; color:var(--muted2); font-size:15px; cursor:pointer; opacity:0; transition:opacity .2s,color .2s; padding:2px 4px; line-height:1; z-index:2; -webkit-tap-highlight-color:transparent; }
+.card:hover .card-hide-btn { opacity:1; }
+.card-hide-btn:hover { color:var(--muted); }
+
+/* HIDE BUTTON ON SPECTRUM DOT */
+.spectrum-dot-hide { position:absolute; bottom:16px; right:-10px; background:var(--card); border:1px solid var(--border); border-radius:50%; width:16px; height:16px; font-size:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0; transition:opacity .15s; line-height:1; color:var(--muted); }
+.spectrum-dot:hover .spectrum-dot-hide { opacity:1; }
+
+/* CALENDAR */
+.cal-wrap { margin-top:40px; padding-top:32px; border-top:1px solid var(--border); }
+.cal-header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
+.cal-title { font-family:var(--ff-serif); font-size:1.4rem; font-weight:400; color:var(--white); }
+.cal-year-nav { display:flex; align-items:center; gap:8px; }
+.cal-year-btn { background:var(--card); border:1px solid var(--border-light); border-radius:6px; color:var(--muted); font-family:var(--ff-mono); font-size:13px; width:30px; height:30px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color .15s,border-color .15s; -webkit-tap-highlight-color:transparent; }
+.cal-year-btn:hover { color:var(--white); border-color:var(--muted); }
+.cal-year-input { background:var(--surface); border:1px solid var(--border-light); border-radius:6px; color:var(--white); font-family:var(--ff-mono); font-size:14px; font-weight:500; width:64px; text-align:center; padding:4px 6px; outline:none; -moz-appearance:textfield; }
+.cal-year-input::-webkit-outer-spin-button,.cal-year-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.cal-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.cal-month { background:var(--card); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.cal-month-name { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; padding:10px 12px 6px; border-bottom:1px solid var(--border); }
+.cal-days-head { display:grid; grid-template-columns:repeat(7,1fr); padding:5px 8px 3px; }
+.cal-dh { font-size:8px; color:var(--muted2); text-align:center; letter-spacing:.06em; }
+.cal-days { display:grid; grid-template-columns:repeat(7,1fr); padding:3px 8px 8px; gap:1px 0; }
+.cal-day { font-size:10px; color:var(--muted); text-align:center; padding:2px 0; border-radius:3px; position:relative; font-variant-numeric:tabular-nums; line-height:1.6; cursor:default; }
+.cal-day.today { color:var(--white); font-weight:500; }
+.cal-day.today::after { content:''; position:absolute; bottom:1px; left:50%; transform:translateX(-50%); width:3px; height:3px; border-radius:50%; background:var(--white); }
+.cal-day.has-bd { border-radius:4px; font-weight:500; }
+.cal-day.empty { pointer-events:none; }
+.cal-day-dot-wrap { position:absolute; bottom:0; left:50%; transform:translateX(-50%); display:flex; gap:1px; }
+.cal-day-dot { width:3px; height:3px; border-radius:50%; }
+@media(max-width:800px){ .cal-grid{grid-template-columns:repeat(2,1fr);} }
+@media(max-width:480px){ .cal-grid{grid-template-columns:1fr 1fr;} }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="header">
+    <h1>Familie <em>tijdlijn</em></h1>
+    <div class="clock-block">
+      <div class="clock-time" id="ct">00:00:00</div>
+      <div class="clock-date" id="cd">laden...</div>
+    </div>
+  </header>
+  <div class="overview" id="overview"></div>
+  <div class="hidden-panel" id="hidden-panel"><div class="hidden-panel-title">Verborgen leden — klik om terug te brengen</div><div class="hidden-chips" id="hidden-chips"></div></div>
+  <div class="spectrum-wrap">
+    <div class="spectrum-title">Leeftijdsoverzicht — klik voor profiel</div>
+    <div class="spectrum" id="spectrum"><div class="spectrum-axis"></div></div>
+  </div>
+  <div class="compare-wrap">
+    <div class="compare-title" id="cmp-toggle">Vergelijken <span class="compare-toggle-icon open" id="cmp-icon">&#8963;</span></div>
+    <div class="compare-body" id="cmp-body">
+      <div class="compare-picker" id="cmp-picker"></div>
+      <div class="cmp-hint" id="cmp-hint">Kies 2 of 3 mensen</div>
+      <div class="compare-results" id="cmp-results"></div>
+    </div>
+  </div>
+  <div class="section-label">Alle leden — klik voor volledig profiel</div>
+  <div class="cards" id="cards"></div>
+
+  <div class="cal-wrap">
+    <div class="cal-header-row">
+      <div class="cal-title">Kalender</div>
+      <div class="cal-year-nav">
+        <button class="cal-year-btn" id="cal-prev">&#8249;</button>
+        <input class="cal-year-input" type="number" id="cal-year-input" value="2026">
+        <button class="cal-year-btn" id="cal-next">&#8250;</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+</div>
+
+<button class="tour-btn" id="tour-btn"><span class="tour-btn-dot"></span> rondleiding</button>
+
+<div class="tour-overlay" id="tour-overlay">
+  <div class="tour-dim" id="tour-dim"></div>
+  <div class="tour-spotlight" id="tour-spotlight"></div>
+  <div class="tour-card" id="tour-card">
+    <div class="tour-step-label" id="tour-step-label">stap 1 / 8</div>
+    <div class="tour-title" id="tour-title"></div>
+    <div class="tour-body" id="tour-body"></div>
+    <div class="tour-nav">
+      <div class="tour-dots" id="tour-dots"></div>
+      <div class="tour-nav-btns">
+        <button class="tour-btn-nav" id="tour-prev">vorige</button>
+        <button class="tour-btn-nav primary" id="tour-next">volgende</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="fs-overlay" id="fs-overlay">
+  <div class="fs-bg" id="fs-bg"></div>
+  <div class="fs-content">
+    <button class="fs-close" id="fs-close">&#x2715;</button>
+    <div id="fs-inner"></div>
+  </div>
+</div>
+
+<script>
+var PEOPLE = [
+  { name:"Levi",     dob:new Date(2015,1,21),  c:"#e867a0" },
+  { name:"Cloe",     dob:new Date(2016,8,21),  c:"#e8d44a" },
+  { name:"Alex",     dob:new Date(2008,5,13),  c:"#a267e8" },
+  { name:"Vincent",  dob:new Date(1981,10,14), c:"#e87c30" },
+  { name:"Bea",      dob:new Date(1982,3,12),  c:"#4ab0e8" },
+  { name:"Eve",      dob:new Date(1958,5,1),   c:"#c867e8" },
+  { name:"Daniel",   dob:new Date(1946,10,18), c:"#e84040" },
+  { name:"Patricia", dob:new Date(1952,8,27),  c:"#4ae880" }
+];
+
+// visibility state
+var hiddenPeople = {};
+
+function activePeople() {
+  var out = [];
+  for (var i=0;i<PEOPLE.length;i++) { if (!hiddenPeople[i]) out.push({p:PEOPLE[i], i:i}); }
+  return out;
+}
+function hidePerson(idx) { hiddenPeople[idx]=true; rebuildAll(); }
+function showPerson(idx) { delete hiddenPeople[idx]; rebuildAll(); }
+
+function renderHiddenPanel() {
+  var panel = document.getElementById('hidden-panel');
+  var chips = document.getElementById('hidden-chips');
+  var keys = [];
+  for (var k in hiddenPeople) { if (hiddenPeople[k]) keys.push(parseInt(k)); }
+  if (!keys.length) { panel.classList.remove('has-items'); chips.innerHTML=''; return; }
+  panel.classList.add('has-items');
+  chips.innerHTML = '';
+  for (var i=0;i<keys.length;i++) {
+    var idx = keys[i], p = PEOPLE[idx];
+    var chip = document.createElement('div');
+    chip.className = 'hidden-chip';
+    chip.title = p.name + ' terugbrengen';
+    chip.innerHTML = '<div class="hidden-chip-dot" style="background:'+p.c+'"></div>'
+      +'<span class="hidden-chip-name">'+p.name+'</span>'
+      +'<span class="hidden-chip-add">+</span>';
+    (function(realIdx){ chip.onclick = function(){ showPerson(realIdx); }; })(idx);
+    chips.appendChild(chip);
+  }
+}
+function rebuildAll() {
+  rebuildCards();
+  spectrumDone=false;
+  overviewDone=false;
+  buildSpectrum(new Date());
+  buildOverview(new Date());
+  buildCompareSelectors();
+  updateCompare(new Date());
+  renderHiddenPanel();
+}
+
+var WEEKDAYS = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+var MONTHS_NL = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+var MONTHS_S  = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+
+function pad(n){ return String(Math.floor(n)).padStart(2,'0'); }
+function fmt(n){ return Math.floor(n).toLocaleString('nl-NL'); }
+
+function nlDate(d){ return d.getDate()+' '+MONTHS_NL[d.getMonth()]+' '+d.getFullYear(); }
+
+function currentAge(dob, now) {
+  var a = now.getFullYear() - dob.getFullYear();
+  var m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) a--;
+  return a;
+}
+
+function nextBirthday(dob, now) {
+  var nb = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+  if (nb <= now) nb.setFullYear(now.getFullYear() + 1);
+  return nb;
+}
+
+function yearProgress(dob, now) {
+  var last = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+  if (last > now) last.setFullYear(now.getFullYear() - 1);
+  var next = new Date(last.getFullYear() + 1, last.getMonth(), last.getDate());
+  return (now - last) / (next - last);
+}
+
+function msDur(ms) {
+  var s = Math.floor(ms / 1000);
+  return {
+    days: Math.floor(s / 86400),
+    hrs:  Math.floor((s % 86400) / 3600),
+    mins: Math.floor((s % 3600) / 60),
+    secs: s % 60,
+    totalSecs: s,
+    totalMins: Math.floor(s / 60),
+    totalHrs:  Math.floor(s / 3600),
+    totalDays: Math.floor(s / 86400)
+  };
+}
+
+function cdStr(ms) {
+  var d=Math.floor(ms/86400000), h=Math.floor((ms%86400000)/3600000),
+      m=Math.floor((ms%3600000)/60000), s=Math.floor((ms%60000)/1000);
+  if (d>0) return d+'d '+pad(h)+'u '+pad(m)+'m '+pad(s)+'s';
+  if (h>0) return h+'u '+pad(m)+'m '+pad(s)+'s';
+  return m+'m '+pad(s)+'s';
+}
+
+function ageParts(dob, now) {
+  var y=now.getFullYear()-dob.getFullYear(), m=now.getMonth()-dob.getMonth(), d=now.getDate()-dob.getDate();
+  if (d<0) { m--; var prev=new Date(now.getFullYear(),now.getMonth(),0); d+=prev.getDate(); }
+  if (m<0) { y--; m+=12; }
+  return {y:y, m:m, d:d};
+}
+
+function zodiacSign(dob) {
+  var m=dob.getMonth()+1, d=dob.getDate();
+  if((m===3&&d>=21)||(m===4&&d<=19))return"♈";
+  if((m===4&&d>=20)||(m===5&&d<=20))return"♉";
+  if((m===5&&d>=21)||(m===6&&d<=20))return"♊";
+  if((m===6&&d>=21)||(m===7&&d<=22))return"♋";
+  if((m===7&&d>=23)||(m===8&&d<=22))return"♌";
+  if((m===8&&d>=23)||(m===9&&d<=22))return"♍";
+  if((m===9&&d>=23)||(m===10&&d<=22))return"♎";
+  if((m===10&&d>=23)||(m===11&&d<=21))return"♏";
+  if((m===11&&d>=22)||(m===12&&d<=21))return"♐";
+  if((m===12&&d>=22)||(m===1&&d<=19))return"♑";
+  if((m===1&&d>=20)||(m===2&&d<=18))return"♒";
+  return"♓";
+}
+
+var ZNAMES = {"♈":"Ram","♉":"Stier","♊":"Tweelingen","♋":"Kreeft","♌":"Leeuw","♍":"Maagd","♎":"Weegschaal","♏":"Schorpioen","♐":"Boogschutter","♑":"Steenbok","♒":"Waterman","♓":"Vissen"};
+function zodiacName(dob){ return ZNAMES[zodiacSign(dob)] || ''; }
+
+// Chinese dierenriem — cyclus van 12, referentie: 1900 = Rat
+var CN_ANIMALS = ["Rat","Os","Tijger","Konijn","Draak","Slang","Paard","Geit","Aap","Haan","Hond","Varken"];
+var CN_EMOJI   = ["🐀","🐂","🐯","🐇","🐉","🐍","🐎","🐐","🐒","🐓","🐕","🐖"];
+// Chinese jaar begint ~half februari; vereenvoudiging: als geboortemaand < 2 (jan) of (feb en dag < 10), gebruik vorig jaar
+function chineseYear(dob) {
+  var y = dob.getFullYear();
+  if (dob.getMonth() === 0 || (dob.getMonth() === 1 && dob.getDate() < 10)) y--;
+  var idx = ((y - 1900) % 12 + 12) % 12;
+  return { animal: CN_ANIMALS[idx], emoji: CN_EMOJI[idx], year: dob.getFullYear() };
+}
+
+function getSeason(dob) {
+  var m = dob.getMonth();
+  if (m<2||m===11) return 'Winter';
+  if (m<5) return 'Lente';
+  if (m<8) return 'Zomer';
+  return 'Herfst';
+}
+
+// ─── COMPARE TOGGLE ───
+var cmpOpen = true;
+document.getElementById('cmp-toggle').onclick = function() {
+  cmpOpen = !cmpOpen;
+  var body = document.getElementById('cmp-body');
+  var icon = document.getElementById('cmp-icon');
+  if (cmpOpen) { body.classList.remove('collapsed'); icon.classList.add('open'); }
+  else          { body.classList.add('collapsed');    icon.classList.remove('open'); }
+};
+
+// ─── COMPARE STATE (chip picker) ───
+var cmpSel = [0, 3]; // indices into PEOPLE, max 3
+
+function buildCompareSelectors() {
+  var picker = document.getElementById('cmp-picker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  var active = activePeople();
+
+  // ensure cmpSel only contains active indices
+  var activeIs = {};
+  for (var k=0;k<active.length;k++) activeIs[active[k].i] = true;
+  var cleaned = [];
+  for (var k=0;k<cmpSel.length;k++) { if (activeIs[cmpSel[k]]) cleaned.push(cmpSel[k]); }
+  // need at least 2 defaults
+  if (cleaned.length < 2 && active.length >= 2) {
+    cleaned = [];
+    var used = {};
+    for (var k=0;k<active.length&&cleaned.length<2;k++) { cleaned.push(active[k].i); used[active[k].i]=true; }
+  }
+  cmpSel = cleaned;
+
+  for (var i=0;i<active.length;i++) {
+    var pidx = active[i].i;
+    var p = active[i].p;
+    var selPos = -1;
+    for (var s=0;s<cmpSel.length;s++) { if(cmpSel[s]===pidx){ selPos=s; break; } }
+
+    var chip = document.createElement('div');
+    chip.className = 'cmp-chip' + (selPos>=0 ? ' sel-'+(selPos+1) : '');
+    chip.style.borderColor = selPos>=0 ? p.c : '';
+    chip.innerHTML = '<span class="cmp-chip-dot" style="background:'+p.c+'"></span>'
+      + p.name
+      + (selPos>=0 ? '<span class="cmp-chip-badge">'+(selPos+1)+'</span>' : '');
+
+    (function(idx, pc) {
+      chip.onclick = function() {
+        var pos = -1;
+        for (var s=0;s<cmpSel.length;s++) { if(cmpSel[s]===idx){ pos=s; break; } }
+        if (pos >= 0) {
+          // deselect — only if more than 2 selected
+          if (cmpSel.length > 2) { cmpSel.splice(pos,1); }
+          else { return; } // can't go below 2
+        } else {
+          if (cmpSel.length >= 3) return; // max 3
+          cmpSel.push(idx);
+        }
+        buildCompareSelectors();
+        updateCompare(new Date());
+      };
+    })(pidx, p.c);
+
+    picker.appendChild(chip);
+  }
+
+  var hint = document.getElementById('cmp-hint');
+  if (hint) {
+    if (cmpSel.length === 1) hint.textContent = 'Kies nog 1 persoon (of meer)';
+    else if (cmpSel.length === 2) hint.textContent = 'Klik op een derde naam om toe te voegen, of klik op een geselecteerde naam om te wisselen';
+    else hint.textContent = 'Klik op een geselecteerde naam om hem eruit te halen';
+  }
+}
+
+function updateCompare(now) {
+  var res = document.getElementById('cmp-results');
+  var indices = cmpSel.slice(0, 3);
+  var count = indices.length;
+
+  if (count < 2) { res.classList.remove('visible'); return; }
+
+  // check duplicates
+  var hasDup = false;
+  for (var i=0;i<indices.length;i++) for (var j=i+1;j<indices.length;j++) if(indices[i]===indices[j]) hasDup=true;
+  if (hasDup) { res.classList.remove('visible'); return; }
+  res.classList.add('visible');
+
+  var people = [];
+  for (var i=0;i<count;i++) people.push(PEOPLE[indices[i]]);
+
+  var combinedDays=0, combinedSecs=0;
+  var stats = [];
+  for (var i=0;i<people.length;i++) {
+    var dur = msDur(now - people[i].dob);
+    var nb  = nextBirthday(people[i].dob, now);
+    var pts = ageParts(people[i].dob, now);
+    stats.push({dur:dur, nb:nb, pts:pts});
+    combinedDays += dur.totalDays;
+    combinedSecs += dur.totalSecs;
+  }
+  var combinedYears = (combinedDays/365.25).toFixed(1);
+
+  var colClass = count===3 ? 'three' : 'two';
+  var colsHtml = '';
+
+  for (var ci=0;ci<people.length;ci++) {
+    var p=people[ci], st=stats[ci];
+    colsHtml += '<div class="compare-side">'
+      +'<div class="compare-side-name" style="color:'+p.c+'">'+p.name+'</div>'
+      +'<div class="compare-stat"><div class="compare-stat-label">Leeftijd</div><div class="compare-stat-val">'+st.pts.y+'j '+st.pts.m+'m '+st.pts.d+'d</div></div>'
+      +'<div class="compare-stat"><div class="compare-stat-label">Dagen geleefd</div><div class="compare-stat-val">'+fmt(st.dur.totalDays)+'</div></div>'
+      +'<div class="compare-stat"><div class="compare-stat-label">Sterrenbeeld</div><div class="compare-stat-val">'+zodiacSign(p.dob)+' '+zodiacName(p.dob)+'</div></div>'
+      +'<div class="compare-stat"><div class="compare-stat-label">Volgende verjaardag</div><div class="compare-stat-val">'+cdStr(st.nb-now)+'</div></div>'
+      +'</div>';
+
+    if (ci < people.length-1) {
+      var a=people[ci], b=people[ci+1];
+      var older=a.dob<b.dob?a:b, younger=a.dob<b.dob?b:a;
+      var diffMs=Math.abs(a.dob-b.dob);
+      var diffYears=(diffMs/(365.25*24*3600*1000)).toFixed(1);
+      var diffDays=Math.floor(diffMs/86400000);
+      var awb=ageParts(older.dob,younger.dob);
+      var awbStr=awb.y>0?awb.y+'j '+(awb.m>0?awb.m+'m':''):awb.m+'m';
+      var aL=now-a.dob, bL=now-b.dob;
+      var morePct=((Math.max(aL,bL)/Math.min(aL,bL)-1)*100).toFixed(0);
+      var moreName=aL>bL?a.name:b.name;
+      var sameZ=zodiacName(a.dob)===zodiacName(b.dob);
+
+      colsHtml += '<div class="compare-middle">'
+        +'<div class="compare-mid-item"><div class="compare-mid-label">Leeftijdsverschil</div><div class="compare-mid-val accent">'+diffYears+' jaar / '+fmt(diffDays)+'d</div></div>'
+        +'<div class="compare-mid-item"><div class="compare-mid-label">Toen '+younger.name+' geboren werd</div><div class="compare-mid-val" style="font-size:10px">'+older.name+' was al '+awbStr+'</div></div>'
+        +'<div class="compare-mid-item"><div class="compare-mid-label">Meer geleefd</div><div class="compare-mid-val accent">'+moreName+' +'+morePct+'%</div></div>'
+        +(sameZ?'<div class="compare-mid-item"><div class="compare-mid-label">Zelfde sterrenb.</div><div class="compare-mid-val accent">'+zodiacSign(a.dob)+' '+zodiacName(a.dob)+'</div></div>':'')
+        +'</div>';
+    }
+  }
+
+  res.innerHTML = '<div class="compare-cols '+colClass+'">'+colsHtml+'</div>'
+    +'<div class="compare-combined">'
+    +'<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde leeftijd</div><div class="compare-combined-val">'+combinedYears+' jaar</div></div>'
+    +'<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde dagen</div><div class="compare-combined-val">'+fmt(combinedDays)+'</div></div>'
+    +'<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde seconden</div><div class="compare-combined-val">'+fmt(combinedSecs)+'</div></div>'
+    +'</div>';
+}
+
+// ─── SPECTRUM ───
+var spectrumDone = false;
+function buildSpectrum(now) {
+  var sp = document.getElementById('spectrum');
+  var dots = sp.querySelectorAll('.spectrum-dot');
+  var ticks = sp.querySelectorAll('.spectrum-tick');
+  for (var i=0;i<dots.length;i++) sp.removeChild(dots[i]);
+  for (var i=0;i<ticks.length;i++) sp.removeChild(ticks[i]);
+
+  var active = activePeople();
+  var maxAge = 0;
+  for (var i=0;i<active.length;i++) {
+    var a = (now - active[i].p.dob) / (365.25*24*3600*1000);
+    if (a > maxAge) maxAge = a;
+  }
+  maxAge = Math.ceil(maxAge/10)*10 + 5;
+  if (maxAge < 10) maxAge = 10;
+
+  for (var t=0;t<=maxAge;t+=10) {
+    var el = document.createElement('div'); el.className='spectrum-tick';
+    el.style.left = ((t/maxAge)*100)+'%'; el.textContent = t; sp.appendChild(el);
+  }
+
+  for (var i=0;i<active.length;i++) {
+    var p = active[i].p, pidx = active[i].i;
+    var age = (now - p.dob) / (365.25*24*3600*1000);
+    var pct = (age/maxAge)*100;
+    var dot = document.createElement('div'); dot.className='spectrum-dot';
+    dot.style.left = pct+'%';
+    var flip = pct > 75;
+    var lbl = document.createElement('div'); lbl.className='spectrum-dot-label';
+    lbl.style.color = p.c;
+    lbl.style.transform = flip ? 'translateX(calc(-100% + 4px))' : 'translateX(0)';
+    lbl.textContent = p.name;
+    var circle = document.createElement('div'); circle.className='spectrum-dot-circle';
+    circle.style.background = p.c;
+    circle.style.boxShadow = '0 0 8px '+p.c;
+    var ageLabel = document.createElement('div'); ageLabel.className='spectrum-dot-age';
+    ageLabel.style.transform = 'translateX(-50%)';
+    ageLabel.textContent = age.toFixed(1)+'j';
+    var hideBtn = document.createElement('div'); hideBtn.className='spectrum-dot-hide';
+    hideBtn.textContent = '✕';
+    hideBtn.title = p.name+' verbergen';
+    dot.appendChild(lbl); dot.appendChild(circle); dot.appendChild(ageLabel); dot.appendChild(hideBtn);
+    (function(realIdx){
+      dot.onclick = function(e){ if(e.target===hideBtn) return; openFullscreen(realIdx); };
+      hideBtn.onclick = function(e){ e.stopPropagation(); hidePerson(realIdx); };
+    })(pidx);
+    sp.appendChild(dot);
+  }
+}
+
+// ─── OVERVIEW ───
+var overviewDone = false;
+function buildOverview(now) {
+  var ov = document.getElementById('overview');
+  var active = activePeople();
+  if (!active.length) { ov.innerHTML=''; return; }
+  var sorted = [];
+  for (var i=0;i<active.length;i++) {
+    sorted.push({p:active[i].p, nb:nextBirthday(active[i].p.dob, now)});
+  }
+  sorted.sort(function(a,b){ return a.nb-b.nb; });
+
+  var nxt=sorted[0], msU=nxt.nb-now;
+  var isToday = nxt.nb.getDate()===now.getDate()&&nxt.nb.getMonth()===now.getMonth();
+  var totalYears=0;
+  for (var i=0;i<active.length;i++) totalYears+=currentAge(active[i].p.dob,now);
+
+  var youngest=active[0].p, oldest=active[0].p;
+  for (var i=1;i<active.length;i++) {
+    if (active[i].p.dob>youngest.dob) youngest=active[i].p;
+    if (active[i].p.dob<oldest.dob) oldest=active[i].p;
+  }
+
+  var upStr='';
+  for (var i=0;i<Math.min(3,sorted.length);i++) {
+    var dd=Math.floor((sorted[i].nb-now)/86400000);
+    upStr+=sorted[i].p.name+' ('+(dd===0?'vandaag':dd+'d')+')';
+    if(i<Math.min(2,sorted.length-1)) upStr+=' · ';
+  }
+
+  ov.innerHTML=
+    '<div class="ov next" style="--next-color:'+nxt.p.c+';animation-delay:.06s">'
+    +'<div class="ov-label">Volgende jarige</div>'
+    +'<div class="ov-value" style="color:'+nxt.p.c+'">'+nxt.p.name+'</div>'
+    +'<div class="ov-sub">'+(isToday?'🎂 vandaag!':cdStr(msU))+'</div></div>'
+    +'<div class="ov" style="animation-delay:.09s"><div class="ov-label">Komende verjaardagen</div><div class="ov-value" style="font-size:10px;color:var(--text)">'+upStr+'</div></div>'
+    +'<div class="ov" style="animation-delay:.12s"><div class="ov-label">Jongste · Oudste</div><div class="ov-value" style="font-size:11px"><span style="color:'+youngest.c+'">'+youngest.name+'</span> · <span style="color:'+oldest.c+'">'+oldest.name+'</span></div><div class="ov-sub">'+currentAge(youngest.dob,now)+' · '+currentAge(oldest.dob,now)+' jaar</div></div>'
+    +'<div class="ov" style="animation-delay:.15s"><div class="ov-label">Totaal geleefd</div><div class="ov-value">'+totalYears+' jaar</div><div class="ov-sub">'+active.length+' personen</div></div>';
+}
+
+// ─── CARDS ───
+var cardEls = []; // {el, pidx}
+
+function rebuildCards() {
+  var container = document.getElementById('cards');
+  // remove old
+  for (var i=0;i<cardEls.length;i++) {
+    if (cardEls[i].el.parentNode) cardEls[i].el.parentNode.removeChild(cardEls[i].el);
+  }
+  cardEls = [];
+  var active = activePeople();
+  for (var i=0;i<active.length;i++) {
+    var pidx = active[i].i;
+    var div = document.createElement('div');
+    div.className = 'card';
+    div.style.borderColor = 'var(--border)';
+    container.appendChild(div);
+    cardEls.push({el:div, pidx:pidx});
+    (function(realIdx, d){
+      d.onclick = function(e){ if(e.target.classList.contains('card-hide-btn')) return; openFullscreen(realIdx); };
+      d.onmouseenter = function(){ d.style.borderColor = PEOPLE[realIdx].c; };
+      d.onmouseleave = function(){ d.style.borderColor = 'var(--border)'; };
+    })(pidx, div);
+  }
+  updateCards(new Date());
+}
+
+function updateCards(now) {
+  for (var i=0;i<cardEls.length;i++) {
+    var pidx=cardEls[i].pidx, p=PEOPLE[pidx];
+    var dur=msDur(now-p.dob), age=currentAge(p.dob,now), pts=ageParts(p.dob,now);
+    var nb=nextBirthday(p.dob,now), isToday=nb.getDate()===now.getDate()&&nb.getMonth()===now.getMonth();
+    var msU=nb-now, prog=yearProgress(p.dob,now), wdBorn=WEEKDAYS[p.dob.getDay()];
+    var progPct=(prog*100).toFixed(1);
+    var lastYear=new Date(now.getFullYear(),p.dob.getMonth(),p.dob.getDate())<=now?now.getFullYear():now.getFullYear()-1;
+
+    cardEls[i].el.innerHTML=
+      '<div class="card-topline" style="background:linear-gradient(90deg,transparent 10%,'+p.c+' 50%,transparent 90%)"></div>'
+      +'<button class="card-hide-btn" title="'+p.name+' verbergen" onclick="hidePerson('+pidx+')">✕</button>'
+      +'<div class="card-header"><div class="card-name">'+p.name+'</div><div class="card-zodiac" style="display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1">'+zodiacSign(p.dob)+'<span style="font-size:13px;opacity:.65">'+chineseYear(p.dob).emoji+'</span></div></div>'
+      +'<div class="card-dob">'+nlDate(p.dob)+'</div>'
+      +'<div class="card-weekday">Geboren op '+wdBorn+' · '+age+' jaar · '+zodiacName(p.dob)+'</div>'
+      +'<div class="stats-grid">'
+      +'<div class="stat"><span class="stat-l">Dagen</span><span class="stat-v big" style="color:'+p.c+'">'+fmt(dur.totalDays)+'</span></div>'
+      +'<div class="stat"><span class="stat-l">Seconden</span><span class="stat-v" style="color:'+p.c+'">'+fmt(dur.totalSecs)+'</span></div>'
+      +'<div class="stat"><span class="stat-l">Uren</span><span class="stat-v">'+fmt(dur.totalHrs)+'</span></div>'
+      +'<div class="stat"><span class="stat-l">Minuten</span><span class="stat-v">'+fmt(dur.totalMins)+'</span></div>'
+      +'</div>'
+      +'<div class="exact-time"><span>'+pts.y+'j</span> <span>'+pts.m+'m</span> <span>'+pts.d+'d</span> <span>'+pad(dur.hrs)+'u</span> <span>'+pad(dur.mins)+'m</span> <span>'+pad(dur.secs)+'s</span></div>'
+      +'<div class="bd-block">'
+      +'<div class="bd-label">Volgende verjaardag</div>'
+      +(isToday?'<div class="bd-today">🎂 Vandaag jarig!</div>':'<div class="bd-countdown" style="color:'+p.c+'">'+cdStr(msU)+'</div>')
+      +'<div class="bd-bar"><div class="bd-fill" style="width:'+progPct+'%;background:linear-gradient(90deg,'+p.c+',transparent)"></div></div>'
+      +'<div class="bd-prog-label"><span>'+MONTHS_S[p.dob.getMonth()]+' '+lastYear+'</span><span>'+progPct+'%</span><span>'+MONTHS_S[p.dob.getMonth()]+' '+nb.getFullYear()+'</span></div>'
+      +'</div>'
+      +'<div class="card-hint">klik voor profiel →</div>';
+  }
+}
+
+// ─── FULLSCREEN ───
+var fsIdx = -1, fsTick = null;
+
+function getMilestones(dob, now) {
+  var age = currentAge(dob, now);
+  var list = [
+    {age:0,label:'Geboren',icon:'👶'},
+    {age:1,label:'1 jaar',icon:'🎂'},
+    {age:4,label:'Kleuterschool',icon:'🎒'},
+    {age:6,label:'Basisschool',icon:'📝'},
+    {age:10,label:'10 jaar',icon:'🎂'},
+    {age:12,label:'Middelbare school',icon:'📚'},
+    {age:16,label:'16 jaar',icon:'🎂'},
+    {age:18,label:'Meerderjarig',icon:'🎓'},
+    {age:21,label:'21 jaar',icon:'🎉'},
+    {age:25,label:'25 jaar',icon:'🎂'},
+    {age:30,label:'30 jaar',icon:'🎂'},
+    {age:40,label:'40 jaar',icon:'🎂'},
+    {age:50,label:'50 jaar',icon:'🎂'},
+    {age:60,label:'60 jaar',icon:'🎂'},
+    {age:65,label:'AOW-leeftijd',icon:'🌅'},
+    {age:70,label:'70 jaar',icon:'🎂'},
+    {age:80,label:'80 jaar',icon:'✨'},
+    {age:100,label:'100 jaar',icon:'💯'}
+  ];
+  var out = [];
+  for (var i=0;i<list.length;i++) {
+    if (list[i].age <= age+12) {
+      var date = new Date(dob.getFullYear()+list[i].age, dob.getMonth(), dob.getDate());
+      out.push({age:list[i].age, label:list[i].label, icon:list[i].icon, date:date, past:date<=now});
+    }
+  }
+  return out;
+}
+
+function renderFS(idx, now) {
+  var p = PEOPLE[idx];
+  var dur = msDur(now-p.dob), age=currentAge(p.dob,now), pts=ageParts(p.dob,now);
+  var nb = nextBirthday(p.dob,now), prog=yearProgress(p.dob,now);
+  var isToday = nb.getDate()===now.getDate()&&nb.getMonth()===now.getMonth();
+  var msU = nb-now;
+  var wdBorn=WEEKDAYS[p.dob.getDay()], seas=getSeason(p.dob);
+  var z=zodiacSign(p.dob), zn=zodiacName(p.dob);
+  var cn=chineseYear(p.dob);
+
+  var r=32, circ=2*Math.PI*r, dash=(prog*circ).toFixed(1);
+  var ringHTML='<div class="bd-ring">'
+    +'<svg viewBox="0 0 76 76">'
+    +'<circle cx="38" cy="38" r="'+r+'" fill="none" stroke="var(--border)" stroke-width="5"/>'
+    +'<circle cx="38" cy="38" r="'+r+'" fill="none" stroke="'+p.c+'" stroke-width="5" stroke-dasharray="'+dash+' '+circ.toFixed(1)+'" stroke-linecap="round"/>'
+    +'</svg><div class="bd-ring-pct">'+(prog*100).toFixed(0)+'%</div></div>';
+
+  var heartbeats=Math.round(dur.totalSecs*1.1);
+  var breaths=Math.round(dur.totalSecs/4);
+  var sleepDays=Math.round(dur.totalDays*0.33);
+  var leapYears=Math.floor(dur.totalDays/1461);
+  var weekends=Math.round(dur.totalDays*2/7);
+  var dayOfYear=Math.ceil((p.dob-new Date(p.dob.getFullYear(),0,0))/86400000);
+  var nextRound=Math.ceil(age/10)*10;
+  var roundDate=new Date(p.dob.getFullYear()+nextRound, p.dob.getMonth(), p.dob.getDate());
+  var daysToRound=Math.round((roundDate-now)/86400000);
+
+  var mls = getMilestones(p.dob, now);
+  var tlHTML='';
+  for (var i=0;i<mls.length;i++) {
+    var m=mls[i];
+    tlHTML+='<div class="tl-item'+(m.past?'':' tl-future')+'">'
+      +'<div class="tl-age" style="color:'+p.c+'">'+m.age+'</div>'
+      +'<div class="tl-line-wrap">'
+      +'<div class="tl-dot" style="background:'+(m.past?p.c:'var(--muted2)')+';box-shadow:'+(m.past?'0 0 7px '+p.c:'none')+'"></div>'
+      +'<div class="tl-line"></div></div>'
+      +'<div class="tl-body"><div class="tl-title">'+m.icon+' '+m.label+'</div><div class="tl-date">'+nlDate(m.date)+'</div></div>'
+      +'</div>';
+  }
+
+  var firstName = p.name.slice(0,-1);
+  var lastChar  = p.name.slice(-1);
+
+  document.getElementById('fs-inner').innerHTML=
+    '<div class="fs-hero">'
+    +'<div><div class="fs-name">'+firstName+'<em style="color:'+p.c+'">'+lastChar+'</em></div>'
+    +'<div class="fs-meta">'+nlDate(p.dob)+' · '+wdBorn+'<br>'+z+' '+zn+' · '+seas+'</div></div>'
+    +'<div class="fs-age-hero"><div class="fs-age-big" style="color:'+p.c+'">'+age+'</div><div class="fs-age-label">jaar oud</div></div>'
+    +'</div>'
+
+    +'<div class="fs-live-strip">'
+    +'<div class="fs-live-card"><div class="fs-live-label">Dagen</div><div class="fs-live-val" style="color:'+p.c+'" id="fs-days">'+fmt(dur.totalDays)+'</div></div>'
+    +'<div class="fs-live-card"><div class="fs-live-label">Uren</div><div class="fs-live-val" id="fs-hrs">'+fmt(dur.totalHrs)+'</div></div>'
+    +'<div class="fs-live-card"><div class="fs-live-label">Minuten</div><div class="fs-live-val" id="fs-mins">'+fmt(dur.totalMins)+'</div></div>'
+    +'<div class="fs-live-card"><div class="fs-live-label">Seconden</div><div class="fs-live-val" style="color:'+p.c+'" id="fs-secs">'+fmt(dur.totalSecs)+'</div></div>'
+    +'</div>'
+
+    +'<div class="fs-section"><div class="fs-section-title">Exacte leeftijd</div>'
+    +'<div class="fs-pulse-row"><div class="pulse-dot" style="background:'+p.c+'"></div><div class="pulse-label">Live</div>'
+    +'<div class="pulse-val" id="fs-exact">'+pts.y+'j '+pts.m+'m '+pts.d+'d '+pad(dur.hrs)+'u '+pad(dur.mins)+'m '+pad(dur.secs)+'s</div></div></div>'
+
+    +'<div class="fs-section"><div class="fs-section-title">Verjaardag</div>'
+    +'<div class="bd-ring-wrap">'+ringHTML
+    +'<div class="bd-ring-info"><div class="bd-ring-cd" style="color:'+p.c+'" id="fs-bd-cd">'+(isToday?'🎂 Vandaag jarig!':cdStr(msU))+'</div>'
+    +'<div class="bd-ring-sub">Volgende: '+nlDate(nb)+' · wordt '+(age+1)+' jaar<br>'+(prog*100).toFixed(1)+'% van verjaardagsjaar voorbij</div>'
+    +'</div></div>'
+    +(function(){
+      var rows='';
+      for(var yi=0;yi<3;yi++){
+        var bdY=new Date(now.getFullYear()+yi+(isToday&&yi===0?1:0), p.dob.getMonth(), p.dob.getDate());
+        if(bdY<=now) bdY=new Date(bdY.getFullYear()+1, p.dob.getMonth(), p.dob.getDate());
+        var bdAge=bdY.getFullYear()-p.dob.getFullYear();
+        var dayName=WEEKDAYS[bdY.getDay()];
+        var msDiff=bdY-now;
+        var dDiff=Math.floor(msDiff/86400000);
+        rows+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px;">'
+          +'<span style="color:'+p.c+';font-family:var(--ff-serif);font-size:1rem">'+bdAge+'</span>'
+          +'<span style="color:var(--text)">'+nlDate(bdY)+' · '+dayName+'</span>'
+          +'<span style="color:var(--muted);font-variant-numeric:tabular-nums">'+dDiff+'d</span>'
+          +'</div>';
+      }
+      return '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:4px">'+rows+'</div>';
+    }())
+    +'</div>'
+
+    +'<div class="fs-section"><div class="fs-section-title">Levenscijfers</div>'
+    +'<div class="fs-grid">'
+    +'<div class="fs-item"><div class="fs-item-label">Hartslagen ♥</div><div class="fs-item-val" id="fs-heartbeats">'+fmt(Math.round(dur.totalSecs*(66/60)))+'</div><div class="fs-item-sub">~66/min · telt mee live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Ademhalingen</div><div class="fs-item-val" id="fs-breaths">'+fmt(Math.round(dur.totalSecs*(15/60)))+'</div><div class="fs-item-sub">~15/min · telt mee live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Slaapdagen</div><div class="fs-item-val">'+fmt(sleepDays)+'</div><div class="fs-item-sub">~33% van het leven</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Schrikkeljaren</div><div class="fs-item-val">'+leapYears+'</div><div class="fs-item-sub">elke ~4 jaar</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Weekenddagen</div><div class="fs-item-val">'+fmt(weekends)+'</div><div class="fs-item-sub">~28% van de dagen</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Dag van het jaar</div><div class="fs-item-val">dag '+dayOfYear+'</div><div class="fs-item-sub">in '+p.dob.getFullYear()+'</div></div>'
+    +'</div></div>'
+
+    +'<div class="fs-section"><div class="fs-section-title">Weetjes</div>'
+    +'<div class="funfacts">'
+    +'<div class="funfact"><strong>Volgende ronde verjaardag</strong>Wordt '+nextRound+' jaar over '+(daysToRound>0?daysToRound+' dagen':'reeds voorbij')+'</div>'
+    +'<div class="funfact"><strong>Seizoen geboren</strong>'+seas+' · op een '+wdBorn+'</div>'
+    +'<div class="funfact"><strong>Sterrenbeeld</strong>'+z+' '+zn+'</div>'
+    +'<div class="funfact"><strong>Leeftijd in weken</strong>'+fmt(Math.floor(dur.totalDays/7))+' weken</div>'
+    +'<div class="funfact" style="grid-column:1/-1;border-color:'+p.c+'33"><strong style="color:'+p.c+'">'+cn.emoji+' Chinees dierenriem</strong>Het jaar '+cn.year+' was het jaar van de <strong style="color:'+p.c+'">'+cn.animal+'</strong> — iedereen geboren in dat jaar draagt de energie van dit dier.</div>'
+    +'</div></div>'
+
+    +'<div class="fs-section"><div class="fs-section-title">Mijlpalen</div>'
+    +'<div class="timeline">'+tlHTML+'</div></div>';
+}
+
+function openFullscreen(idx) {
+  fsIdx = idx;
+  var overlay = document.getElementById('fs-overlay');
+  overlay.classList.add('open');
+  overlay.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+  renderFS(idx, new Date());
+  if (fsTick) clearInterval(fsTick);
+  fsTick = setInterval(function(){
+    if (fsIdx < 0) return;
+    var now = new Date();
+    var p = PEOPLE[fsIdx];
+    var dur = msDur(now - p.dob);
+    var pts = ageParts(p.dob, now);
+    var nb  = nextBirthday(p.dob, now);
+    var isToday = nb.getDate()===now.getDate()&&nb.getMonth()===now.getMonth();
+    function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
+    set('fs-days',  fmt(dur.totalDays));
+    set('fs-hrs',   fmt(dur.totalHrs));
+    set('fs-mins',  fmt(dur.totalMins));
+    set('fs-secs',  fmt(dur.totalSecs));
+    set('fs-exact', pts.y+'j '+pts.m+'m '+pts.d+'d '+pad(dur.hrs)+'u '+pad(dur.mins)+'m '+pad(dur.secs)+'s');
+    set('fs-bd-cd', isToday ? '🎂 Vandaag jarig!' : cdStr(nb-now));
+    set('fs-heart',   fmt(Math.round(dur.totalSecs * 1.1)));
+    set('fs-breath',  fmt(Math.round(dur.totalSecs * 0.25)));
+    set('fs-sleep',   fmt(Math.round(dur.totalDays * 0.33)));
+    set('fs-weekend', fmt(Math.round(dur.totalDays * 2 / 7)));
+  }, 1000);
+}
+
+function closeFullscreen() {
+  fsIdx = -1;
+  document.getElementById('fs-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  if (fsTick) { clearInterval(fsTick); fsTick = null; }
+}
+
+document.getElementById('fs-close').onclick = closeFullscreen;
+document.getElementById('fs-bg').onclick    = closeFullscreen;
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeFullscreen(); });
+
+// ─── MAIN TICK ───
+function tick() {
+  var now = new Date();
+  document.getElementById('ct').textContent = pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  document.getElementById('cd').textContent = now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  updateCards(now);
+  updateCompare(now);
+  if (!spectrumDone || now.getSeconds()===0) { buildSpectrum(now); spectrumDone=true; }
+  if (!overviewDone  || now.getSeconds()===0) { buildOverview(now);  overviewDone=true; }
+}
+
+rebuildCards();
+renderHiddenPanel();
+buildCompareSelectors();
+tick();
+setInterval(tick, 1000);
+
+// ─── TOUR ───
+var TOUR_STEPS = [
+  {
+    target: 'overview',
+    title: 'Sneloverzicht',
+    body: 'Bovenaan zie je in één oogopslag: wie er het eerst jarig is, de komende verjaardagen, wie de jongste en oudste zijn, en het totale aantal geleefd jaren van de hele familie.'
+  },
+  {
+    target: 'spectrum',
+    title: 'Leeftijdsspectrum',
+    body: 'Alle 8 familieleden op een as van jong naar oud. <strong>Klik op een naam</strong> voor het profiel. Hover om het <strong>✕ verberg-knopje</strong> te zien — daarmee haal je iemand tijdelijk van het scherm.'
+  },
+  {
+    target: 'hidden-panel',
+    title: 'Verborgen leden',
+    body: 'Mensen die je hebt verborgen verschijnen hier als chips. <strong>Klik op een chip</strong> om die persoon meteen terug te brengen op alle schermen.'
+  },
+  {
+    target: 'cmp-picker',
+    title: 'Vergelijken',
+    body: 'Klik op namen om ze te selecteren — minimaal 2, maximaal 3. De nummertjes tonen de volgorde. Klik op een geselecteerde naam om hem eruit te halen. De vergelijking update meteen.'
+  },
+  {
+    target: 'cmp-results',
+    title: 'Vergelijkingsresultaten',
+    body: 'Onderaan de vergelijking zie je de <strong>gecombineerde leeftijd, dagen en seconden</strong> van alle geselecteerde personen bij elkaar opgeteld. Live bijgewerkt per seconde.'
+  },
+  {
+    target: 'cards',
+    title: 'Persoonlijke kaarten',
+    body: 'Elke kaart toont dagen, uren, minuten en seconden geleefd — live per seconde. Onderaan staat een voortgangsbalk die aangeeft hoe ver je in het huidige verjaardagsjaar zit. <strong>Klik op een kaart</strong> voor het volledige profiel.'
+  },
+  {
+    target: null,
+    title: 'Volledig profiel',
+    body: 'Na een klik op een kaart: exacte leeftijd tot op de seconde, live hartslagen en ademhalingen, en in de <strong>Weetjes</strong> sectie het <strong>Chinese dierenriem-dier</strong> van het geboortejaar.'
+  },
+  {
+    target: 'tour-btn',
+    title: 'Dat was de rondleiding!',
+    body: 'Je weet nu alles. Klik op een kaart of naam om te verkennen. Dit rondleiding-knopje staat altijd rechtsonder als je het nog een keer wilt bekijken.'
+  }
+];
+
+var tourStep = 0;
+
+function getTourTargetEl(step) {
+  if (!step.target) return null;
+  return document.getElementById(step.target);
+}
+
+function getRect(el) {
+  var r = el.getBoundingClientRect();
+  return { top:r.top, left:r.left, width:r.width, height:r.height };
+}
+
+function positionTourCard(targetEl) {
+  var card = document.getElementById('tour-card');
+  var spotlight = document.getElementById('tour-spotlight');
+  var pad = 12;
+
+  if (!targetEl) {
+    // center card, no spotlight
+    spotlight.style.opacity = '0';
+    card.style.top = '50%';
+    card.style.left = '50%';
+    card.style.transform = 'translate(-50%,-50%)';
+    return;
+  }
+
+  spotlight.style.opacity = '1';
+  var r = getRect(targetEl);
+  var sTop  = Math.max(8, r.top - pad);
+  var sLeft = Math.max(8, r.left - pad);
+  var sW    = Math.min(r.width + pad*2, window.innerWidth - 16);
+  var sH    = r.height + pad*2;
+
+  spotlight.style.top    = sTop + 'px';
+  spotlight.style.left   = sLeft + 'px';
+  spotlight.style.width  = sW + 'px';
+  spotlight.style.height = sH + 'px';
+
+  // place card below or above
+  var cardW = Math.min(300, window.innerWidth - 32);
+  var cardH = 200;
+  var cLeft = Math.max(16, Math.min(sLeft, window.innerWidth - cardW - 16));
+  var spBottom = sTop + sH;
+  var cTop;
+  if (spBottom + cardH + 16 < window.innerHeight) {
+    cTop = spBottom + 12;
+  } else {
+    cTop = Math.max(16, sTop - cardH - 12);
+  }
+
+  card.style.transform = 'none';
+  card.style.top  = cTop + 'px';
+  card.style.left = cLeft + 'px';
+  card.style.width = cardW + 'px';
+}
+
+function renderTourStep(idx) {
+  var step = TOUR_STEPS[idx];
+  var total = TOUR_STEPS.length;
+
+  document.getElementById('tour-step-label').textContent = 'stap '+(idx+1)+' / '+total;
+  document.getElementById('tour-title').textContent = step.title;
+  document.getElementById('tour-body').innerHTML = step.body;
+
+  // dots
+  var dots = document.getElementById('tour-dots');
+  dots.innerHTML = '';
+  for (var i=0;i<total;i++) {
+    var d = document.createElement('div');
+    d.className = 'tour-dot' + (i===idx?' active':'');
+    dots.appendChild(d);
+  }
+
+  document.getElementById('tour-prev').style.display = idx===0 ? 'none' : '';
+  var nextBtn = document.getElementById('tour-next');
+  nextBtn.textContent = idx===total-1 ? 'sluiten' : 'volgende';
+
+  var targetEl = getTourTargetEl(step);
+  if (targetEl) targetEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+  setTimeout(function(){ positionTourCard(targetEl); }, 100);
+}
+
+function openTour() {
+  tourStep = 0;
+  document.getElementById('tour-overlay').classList.add('open');
+  renderTourStep(0);
+}
+
+function closeTour() {
+  document.getElementById('tour-overlay').classList.remove('open');
+  document.getElementById('tour-spotlight').style.opacity = '0';
+}
+
+document.getElementById('tour-btn').onclick = openTour;
+document.getElementById('tour-dim').onclick = closeTour;
+
+document.getElementById('tour-next').onclick = function() {
+  if (tourStep >= TOUR_STEPS.length-1) { closeTour(); return; }
+  tourStep++;
+  renderTourStep(tourStep);
+};
+
+document.getElementById('tour-prev').onclick = function() {
+  if (tourStep <= 0) return;
+  tourStep--;
+  renderTourStep(tourStep);
+};
+
+// ─── TOUR ───
+var TOUR_STEPS = [
+  {
+    target: '.header',
+    title: 'Familie tijdlijn',
+    body: 'Dit is de <strong>live klok</strong> rechtsboven — hij tikt elke seconde. Alle getallen in de app worden in realtime bijgewerkt zolang je de pagina open hebt.'
+  },
+  {
+    target: '.overview',
+    title: 'Snel overzicht',
+    body: 'Vier handige blokjes bovenaan: wie er als volgende jarig is (met countdown), de drie komende verjaardagen, de jongste en oudste in de familie, en de totale gecombineerde leeftijd van iedereen samen.'
+  },
+  {
+    target: '.spectrum-wrap',
+    title: 'Leeftijdsspectrum',
+    body: 'Een visuele lijn die iedereen op leeftijd plaatst. Klik op een <strong>naam of stip</strong> om het volledige profiel van die persoon te openen.'
+  },
+  {
+    target: '.compare-wrap',
+    title: 'Vergelijken',
+    body: 'Kies twee personen om ze naast elkaar te zetten. Je ziet het leeftijdsverschil, hoelang degene al leefde toen de ander geboren werd, wie meer procent heeft geleefd, en of ze hetzelfde sterrenbeeld hebben. Via <strong>"+ derde persoon"</strong> voeg je een derde toe aan de vergelijking.'
+  },
+  {
+    target: '.compare-wrap',
+    title: 'Gecombineerde leeftijd',
+    body: 'Onderaan de vergelijking staat de <strong>gecombineerde leeftijd</strong> van de geselecteerde personen — in jaren, dagen én seconden, live bijgewerkt. Kies twee (of drie) mensen en scroll naar beneden om het te zien.'
+  },
+  {
+    target: '.cards',
+    title: 'Persoonlijke kaarten',
+    body: 'Elke kaart toont: exacte leeftijd in dagen, seconden, uren en minuten, de dag van de week waarop iemand geboren is, het sterrenbeeld, en een voortgangsbalk tot de volgende verjaardag. <strong>Klik op een kaart</strong> voor het volledige profiel.'
+  },
+  {
+    target: '.cards',
+    title: 'Volledig profiel',
+    body: 'In het profiel vind je live levenscijfers die per seconde oplopen: hartslagen, ademhalingen, slaapdagen en weekenddagen. Plus een <strong>verjaardagsring</strong>, mijlpalentijdlijn en weetjes zoals de volgende ronde verjaardag en het geboorteseizoen.'
+  }
+];
+
+var tourStep = 0;
+var tourActive = false;
+
+function getTourTargetEl(selector) {
+  return document.querySelector(selector);
+}
+
+function positionTourCard(targetEl) {
+  var card = document.getElementById('tour-card');
+  var spot = document.getElementById('tour-spotlight');
+  if (!targetEl) return;
+
+  var rect = targetEl.getBoundingClientRect();
+  var pad = 10;
+
+  spot.style.top    = (rect.top - pad) + 'px';
+  spot.style.left   = (rect.left - pad) + 'px';
+  spot.style.width  = (rect.width + pad*2) + 'px';
+  spot.style.height = (rect.height + pad*2) + 'px';
+
+  // scroll target into view smoothly
+  targetEl.scrollIntoView({behavior:'smooth', block:'center'});
+
+  // position card below or above
+  var cardW = 300;
+  var winW = window.innerWidth;
+  var winH = window.innerHeight;
+
+  var cx = rect.left + rect.width/2;
+  var cardLeft = Math.min(Math.max(cx - cardW/2, 12), winW - cardW - 12);
+
+  var spaceBelow = winH - rect.bottom - pad;
+  var spaceAbove = rect.top - pad;
+  var cardTop;
+  if (spaceBelow >= 180) {
+    cardTop = rect.bottom + pad + 12;
+  } else if (spaceAbove >= 180) {
+    cardTop = rect.top - pad - 12 - 200; // approx card height
+    if (cardTop < 8) cardTop = 8;
+  } else {
+    cardTop = Math.max(rect.bottom + pad + 8, winH * 0.55);
+  }
+
+  card.style.left = cardLeft + 'px';
+  card.style.top  = cardTop + 'px';
+  card.style.maxWidth = cardW + 'px';
+}
+
+function renderTourStep() {
+  var step = TOUR_STEPS[tourStep];
+  var total = TOUR_STEPS.length;
+
+  document.getElementById('tour-step-label').textContent = 'stap ' + (tourStep+1) + ' / ' + total;
+  document.getElementById('tour-title').textContent = step.title;
+  document.getElementById('tour-body').innerHTML = step.body;
+
+  var dots = document.getElementById('tour-dots');
+  dots.innerHTML = '';
+  for (var i=0;i<total;i++) {
+    var d = document.createElement('div');
+    d.className = 'tour-dot' + (i===tourStep ? ' active' : '');
+    dots.appendChild(d);
+  }
+
+  var prevBtn = document.getElementById('tour-prev');
+  var nextBtn = document.getElementById('tour-next');
+  prevBtn.style.display = tourStep === 0 ? 'none' : '';
+  nextBtn.textContent = tourStep === total-1 ? 'klaar' : 'volgende';
+
+  var targetEl = getTourTargetEl(step.target);
+  setTimeout(function(){ positionTourCard(targetEl); }, 50);
+}
+
+function openTour() {
+  tourStep = 0;
+  tourActive = true;
+  document.getElementById('tour-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderTourStep();
+}
+
+function closeTour() {
+  tourActive = false;
+  document.getElementById('tour-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('tour-btn').onclick = openTour;
+document.getElementById('tour-dim').onclick  = closeTour;
+document.getElementById('tour-card').onclick = function(e){ e.stopPropagation(); };
+
+document.getElementById('tour-next').onclick = function() {
+  if (tourStep >= TOUR_STEPS.length - 1) { closeTour(); return; }
+  tourStep++;
+  renderTourStep();
+};
+
+document.getElementById('tour-prev').onclick = function() {
+  if (tourStep <= 0) return;
+  tourStep--;
+  renderTourStep();
+};
+
+// ─── CALENDAR ───
+var calYear = new Date().getFullYear();
+
+function buildCalendar() {
+  var grid = document.getElementById('cal-grid');
+  if (!grid) return;
+  var today = new Date();
+  var active = activePeople();
+
+  // build birthday lookup: "m-d" -> [{name, color}]
+  var bdMap = {};
+  for (var pi=0; pi<active.length; pi++) {
+    var p = active[pi].p;
+    var m = p.dob.getMonth(); // 0-based
+    var d = p.dob.getDate();
+    var key = m + '-' + d;
+    if (!bdMap[key]) bdMap[key] = [];
+    bdMap[key].push({ name: p.name, color: p.c, age: calYear - p.dob.getFullYear() });
+  }
+
+  var DAY_NAMES = ['ma','di','wo','do','vr','za','zo'];
+  var MONTH_NAMES = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+
+  var html = '';
+  for (var mo=0; mo<12; mo++) {
+    var firstDay = new Date(calYear, mo, 1).getDay(); // 0=sun
+    // convert to mon-based: sun=6, mon=0
+    var startOffset = (firstDay + 6) % 7;
+    var daysInMonth = new Date(calYear, mo+1, 0).getDate();
+
+    html += '<div class="cal-month">';
+    html += '<div class="cal-month-name">' + MONTH_NAMES[mo] + '</div>';
+    html += '<div class="cal-days-head">';
+    for (var dn=0; dn<7; dn++) html += '<div class="cal-dh">' + DAY_NAMES[dn] + '</div>';
+    html += '</div>';
+    html += '<div class="cal-days">';
+
+    // empty cells before first
+    for (var e=0; e<startOffset; e++) html += '<div class="cal-day empty"></div>';
+
+    for (var day=1; day<=daysInMonth; day++) {
+      var isToday = (calYear===today.getFullYear() && mo===today.getMonth() && day===today.getDate());
+      var key = mo + '-' + day;
+      var bds = bdMap[key] || [];
+      var cls = 'cal-day';
+      if (isToday) cls += ' today';
+      if (bds.length) cls += ' has-bd';
+
+      var title = '';
+      var dots = '';
+      var bgStyle = '';
+      var colorStyle = '';
+
+      if (bds.length) {
+        var names = [];
+        for (var bi=0; bi<bds.length; bi++) {
+          names.push(bds[bi].name + ' (' + bds[bi].age + ')');
+        }
+        title = ' title="' + names.join(', ') + '"';
+        // tint background with first person's color
+        bgStyle = ' style="background:' + bds[0].color + '22;color:' + bds[0].color + '"';
+        dots += '<div class="cal-day-dot-wrap">';
+        for (var bi=0; bi<bds.length && bi<3; bi++) {
+          dots += '<div class="cal-day-dot" style="background:' + bds[bi].color + '"></div>';
+        }
+        dots += '</div>';
+      }
+
+      html += '<div class="' + cls + '"' + title + bgStyle + '>' + day + dots + '</div>';
+    }
+
+    html += '</div></div>';
+  }
+
+  grid.innerHTML = html;
+
+  // update year input
+  var inp = document.getElementById('cal-year-input');
+  if (inp) inp.value = calYear;
+}
+
+document.getElementById('cal-prev').onclick = function() { calYear--; buildCalendar(); };
+document.getElementById('cal-next').onclick = function() { calYear++; buildCalendar(); };
+document.getElementById('cal-year-input').onchange = function() {
+  var v = parseInt(this.value);
+  if (v > 1900 && v < 2200) { calYear = v; buildCalendar(); }
+};
+document.getElementById('cal-year-input').onkeydown = function(e) {
+  if (e.key === 'Enter') { var v = parseInt(this.value); if (v > 1900 && v < 2200) { calYear = v; buildCalendar(); } }
+};
+
+buildCalendar();
+
+document.addEventListener('keydown', function(e) {
+  if (!tourActive) return;
+  if (e.key === 'ArrowRight' || e.key === 'Enter') document.getElementById('tour-next').click();
+  if (e.key === 'ArrowLeft') document.getElementById('tour-prev').click();
+  if (e.key === 'Escape') closeTour();
+});
+</script>
+</body>
+</html>
