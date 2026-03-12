@@ -12,7 +12,7 @@
       --bg:     #f5f0e8;
       --ink:    #1a1410;
       --muted:  #8a7f72;
-      --accent: #c84b2f;
+      --accent: #6b21a8;
     }
 
     html, body {
@@ -31,6 +31,7 @@
       min-height: 100vh;
       padding: 2rem;
       cursor: none;
+      transition: background-color 0.45s ease;
     }
 
     /* ── Grain ──────────────────────────────────────────────────── */
@@ -63,13 +64,13 @@
       position: fixed;
       width: 10px;
       height: 10px;
-      background: #c84b2f;
+      background: #6b21a8;
       background: var(--accent);
       border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-50%, -50%);
-      transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+      transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease, background-color 0.45s ease;
     }
 
     .cursor.expanded {
@@ -139,19 +140,21 @@
 
     h1 em {
       font-style: italic;
-      color: #c84b2f;
+      color: #6b21a8;
       color: var(--accent);
       display: inline-block;
+      transition: color 0.45s ease;
     }
 
     /* ── Divider ────────────────────────────────────────────────── */
     .divider {
       width: 2rem;
       height: 1px;
-      background: #c84b2f;
+      background: #6b21a8;
       background: var(--accent);
       margin: 2rem 0;
       transform-origin: left center;
+      transition: background-color 0.45s ease;
     }
 
     .divider[data-stagger].visible {
