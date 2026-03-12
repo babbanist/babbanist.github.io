@@ -124,49 +124,53 @@ function animateTrail() {
   const n = trailPts.length;
 
   if (n >= 3) {
-    // Three rendering layers: wide glow → mid glow → sharp core
+    // Three rendering layers: wide glow → mid glow → sharp core.
+    // Each segment is drawn individually so the fade is tied to
+    // array position (tail=transparent, head=opaque) and stays
+    // correct no matter how fast or erratically the cursor moves.
     const layers = [
-      { blur: 22, maxW: 12,  maxAlpha: 0.10 },
-      { blur:  9, maxW:  5,  maxAlpha: 0.22 },
-      { blur:  0, maxW:  2,  maxAlpha: 0.80 },
+      { blur: 24, maxW: 14,  maxAlpha: 0.11 },
+      { blur:  8, maxW:  5,  maxAlpha: 0.26 },
+      { blur:  0, maxW:  2,  maxAlpha: 0.88 },
     ];
 
     for (const { blur, maxW, maxAlpha } of layers) {
       tctx.save();
       tctx.shadowBlur  = blur;
-      tctx.shadowColor = `rgba(${r},${g},${b},0.9)`;
+      tctx.shadowColor = `rgba(${r},${g},${b},1)`;
       tctx.lineCap  = 'round';
       tctx.lineJoin = 'round';
 
-      // Draw as one continuous smooth path using midpoints
-      tctx.beginPath();
-      tctx.moveTo(trailPts[0].x, trailPts[0].y);
-      for (let i = 1; i < n - 1; i++) {
-        const mx = (trailPts[i].x + trailPts[i + 1].x) / 2;
-        const my = (trailPts[i].y + trailPts[i + 1].y) / 2;
-        tctx.quadraticCurveTo(trailPts[i].x, trailPts[i].y, mx, my);
+      for (let i = 1; i < n; i++) {
+        const t     = i / n;            // 0 = tail, 1 = head
+        const alpha = t * t * maxAlpha; // quadratic: slow at tail, bright at head
+        const width = 0.3 + t * maxW;
+
+        tctx.beginPath();
+        tctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+        tctx.lineWidth   = width;
+
+        // Smooth quadratic bezier through midpoints
+        if (i >= 2 && i < n - 1) {
+          const p0 = trailPts[i - 2], p1 = trailPts[i - 1], p2 = trailPts[i];
+          tctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+          tctx.quadraticCurveTo(p1.x, p1.y, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+        } else {
+          tctx.moveTo(trailPts[i - 1].x, trailPts[i - 1].y);
+          tctx.lineTo(trailPts[i].x,     trailPts[i].y);
+        }
+        tctx.stroke();
       }
-      tctx.lineTo(trailPts[n - 1].x, trailPts[n - 1].y);
-
-      // Gradient stroke: fade from head (bright) to tail (transparent)
-      const grad = tctx.createLinearGradient(trailPts[0].x, trailPts[0].y, trailPts[n - 1].x, trailPts[n - 1].y);
-      grad.addColorStop(0,   `rgba(${r},${g},${b},0)`);
-      grad.addColorStop(0.4, `rgba(${r},${g},${b},${maxAlpha * 0.4})`);
-      grad.addColorStop(1,   `rgba(${r},${g},${b},${maxAlpha})`);
-
-      tctx.strokeStyle = grad;
-      tctx.lineWidth   = maxW;
-      tctx.stroke();
       tctx.restore();
     }
 
     // Soft radial glow at cursor head
-    const grd = tctx.createRadialGradient(trailHeadX, trailHeadY, 0, trailHeadX, trailHeadY, 24);
-    grd.addColorStop(0,   `rgba(${r},${g},${b},0.28)`);
-    grd.addColorStop(0.5, `rgba(${r},${g},${b},0.08)`);
+    const grd = tctx.createRadialGradient(trailHeadX, trailHeadY, 0, trailHeadX, trailHeadY, 26);
+    grd.addColorStop(0,   `rgba(${r},${g},${b},0.30)`);
+    grd.addColorStop(0.5, `rgba(${r},${g},${b},0.09)`);
     grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
     tctx.beginPath();
-    tctx.arc(trailHeadX, trailHeadY, 24, 0, Math.PI * 2);
+    tctx.arc(trailHeadX, trailHeadY, 26, 0, Math.PI * 2);
     tctx.fillStyle = grd;
     tctx.fill();
   }
