@@ -294,7 +294,7 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
       <div class="spectrum-title">Leeftijdsoverzicht — klik voor profiel</div>
       <div class="spectrum-year-widget">
         <button class="spectrum-now-btn hidden" id="spectrum-now-btn">terug naar nu</button>
-        <div class="spectrum-year-box" id="spectrum-year-box" title="Scroll om jaar te wisselen">2026</div>
+        <div class="spectrum-year-box" id="spectrum-year-box" title="Scroll om jaar te wisselen"></div>
       </div>
     </div>
     <div class="spectrum" id="spectrum"><div class="spectrum-axis"></div></div>
@@ -317,7 +317,7 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
       <div class="cal-title">Kalender</div>
       <div class="cal-year-nav">
         <button class="cal-year-btn" id="cal-prev">&#8249;</button>
-        <input class="cal-year-input" type="number" id="cal-year-input" value="2026">
+        <input class="cal-year-input" type="number" id="cal-year-input">
         <button class="cal-year-btn" id="cal-next">&#8250;</button>
       </div>
     </div>
@@ -520,6 +520,8 @@ document.getElementById('cmp-toggle').onclick = function() {
 
 // ─── COMPARE ───
 var cmpSel = [0, 3];
+var cmpNeedsRebuild = true;
+var cmpDynEls = null;
 
 function buildCompareSelectors() {
   var picker = document.getElementById('cmp-picker');
@@ -563,72 +565,116 @@ function buildCompareSelectors() {
     if (cmpSel.length===2) hint.textContent='Klik op een naam om een derde toe te voegen, of klik een geselecteerde naam om te wisselen';
     else hint.textContent='Klik op een geselecteerde naam om hem eruit te halen';
   }
+  cmpNeedsRebuild = true;
 }
 
 function updateCompare(now) {
-  var res=document.getElementById('cmp-results');
-  var indices=cmpSel.slice(0,3);
-  var count=indices.length;
-  if (count<2){res.classList.remove('visible');return;}
-  var hasDup=false;
-  for (var i=0;i<indices.length;i++) for(var j=i+1;j<indices.length;j++) if(indices[i]===indices[j]) hasDup=true;
-  if (hasDup){res.classList.remove('visible');return;}
+  var res = document.getElementById('cmp-results');
+  var indices = cmpSel.slice(0, 3);
+  var count = indices.length;
+  if (count < 2) { res.classList.remove('visible'); cmpDynEls = null; return; }
+  var hasDup = false;
+  for (var i = 0; i < indices.length; i++) for (var j = i+1; j < indices.length; j++) if (indices[i] === indices[j]) hasDup = true;
+  if (hasDup) { res.classList.remove('visible'); cmpDynEls = null; return; }
   res.classList.add('visible');
 
-  var people=[];
-  for (var i=0;i<count;i++) people.push(PEOPLE[indices[i]]);
+  var people = [];
+  for (var i = 0; i < count; i++) people.push(PEOPLE[indices[i]]);
 
-  var combinedDays=0,combinedSecs=0;
-  var stats=[];
-  for (var i=0;i<people.length;i++){
-    var dur=msDur(now-people[i].dob);
-    var nb=nextBirthday(people[i].dob,now);
-    var pts=ageParts(people[i].dob,now);
-    stats.push({dur:dur,nb:nb,pts:pts});
-    combinedDays+=dur.totalDays;
-    combinedSecs+=dur.totalSecs;
+  // ── Light update (per-second tick, no structural change) ──
+  if (!cmpNeedsRebuild && cmpDynEls) {
+    var combinedDays = 0, combinedSecs = 0;
+    for (var ci = 0; ci < count; ci++) {
+      var p = people[ci];
+      var dur = msDur(now - p.dob);
+      var pts = ageParts(p.dob, now);
+      var nb = nextBirthday(p.dob, now);
+      var side = cmpDynEls.sides[ci];
+      side.elAge.textContent  = pts.y + 'j ' + pts.m + 'm ' + pts.d + 'd';
+      side.elDays.textContent = fmt(dur.totalDays);
+      side.elCd.textContent   = cdStr(nb - now);
+      combinedDays += dur.totalDays;
+      combinedSecs += dur.totalSecs;
+      if (ci < count - 1 && side.elMore) {
+        var a = people[ci], b = people[ci+1];
+        var aL = now - a.dob, bL = now - b.dob;
+        side.elMore.textContent = (aL > bL ? a.name : b.name) + ' +' + ((Math.max(aL,bL)/Math.min(aL,bL)-1)*100).toFixed(0) + '%';
+      }
+    }
+    var combinedYears = (combinedDays / 365.25).toFixed(1);
+    cmpDynEls.elCombYears.textContent = combinedYears + ' jaar';
+    cmpDynEls.elCombDays.textContent  = fmt(combinedDays);
+    cmpDynEls.elCombSecs.textContent  = fmt(combinedSecs);
+    return;
   }
-  var combinedYears=(combinedDays/365.25).toFixed(1);
-  var colClass=count===3?'three':'two';
-  var colsHtml='';
 
-  for (var ci=0;ci<people.length;ci++){
-    var p=people[ci],st=stats[ci];
-    colsHtml+='<div class="compare-side">'
-      +'<div class="compare-side-name" style="color:'+p.c+'">'+p.name+'</div>'
-      +'<div class="compare-stat"><div class="compare-stat-label">Leeftijd</div><div class="compare-stat-val">'+st.pts.y+'j '+st.pts.m+'m '+st.pts.d+'d</div></div>'
-      +'<div class="compare-stat"><div class="compare-stat-label">Dagen geleefd</div><div class="compare-stat-val">'+fmt(st.dur.totalDays)+'</div></div>'
-      +'<div class="compare-stat"><div class="compare-stat-label">Sterrenbeeld</div><div class="compare-stat-val">'+zodiacSign(p.dob)+' '+zodiacName(p.dob)+'</div></div>'
-      +'<div class="compare-stat"><div class="compare-stat-label">Volgende verjaardag</div><div class="compare-stat-val">'+cdStr(st.nb-now)+'</div></div>'
-      +'</div>';
+  // ── Full rebuild (selection changed or first render) ──
+  var combinedDays = 0, combinedSecs = 0;
+  var stats = [];
+  for (var i = 0; i < count; i++) {
+    var dur = msDur(now - people[i].dob);
+    var nb = nextBirthday(people[i].dob, now);
+    var pts = ageParts(people[i].dob, now);
+    stats.push({dur:dur, nb:nb, pts:pts});
+    combinedDays += dur.totalDays;
+    combinedSecs += dur.totalSecs;
+  }
+  var combinedYears = (combinedDays / 365.25).toFixed(1);
+  var colClass = count === 3 ? 'three' : 'two';
+  var colsHtml = '';
 
-    if (ci<people.length-1){
-      var a=people[ci],b=people[ci+1];
-      var older=a.dob<b.dob?a:b, younger=a.dob<b.dob?b:a;
-      var diffMs=Math.abs(a.dob-b.dob);
-      var diffYears=(diffMs/(365.25*24*3600*1000)).toFixed(1);
-      var diffDays=Math.floor(diffMs/86400000);
-      var awb=ageParts(older.dob,younger.dob);
-      var awbStr=awb.y>0?awb.y+'j '+(awb.m>0?awb.m+'m':''):awb.m+'m';
-      var aL=now-a.dob,bL=now-b.dob;
-      var morePct=((Math.max(aL,bL)/Math.min(aL,bL)-1)*100).toFixed(0);
-      var moreName=aL>bL?a.name:b.name;
-      var sameZ=zodiacName(a.dob)===zodiacName(b.dob);
-      colsHtml+='<div class="compare-middle">'
-        +'<div class="compare-mid-item"><div class="compare-mid-label">Leeftijdsverschil</div><div class="compare-mid-val accent">'+diffYears+' jaar / '+fmt(diffDays)+'d</div></div>'
-        +'<div class="compare-mid-item"><div class="compare-mid-label">Toen '+younger.name+' geboren werd</div><div class="compare-mid-val" style="font-size:10px">'+older.name+' was al '+awbStr+'</div></div>'
-        +'<div class="compare-mid-item"><div class="compare-mid-label">Meer geleefd</div><div class="compare-mid-val accent">'+moreName+' +'+morePct+'%</div></div>'
-        +(sameZ?'<div class="compare-mid-item"><div class="compare-mid-label">Zelfde sterrenb.</div><div class="compare-mid-val accent">'+zodiacSign(a.dob)+' '+zodiacName(a.dob)+'</div></div>':'')
-        +'</div>';
+  for (var ci = 0; ci < people.length; ci++) {
+    var p = people[ci], st = stats[ci];
+    colsHtml += '<div class="compare-side">'
+      + '<div class="compare-side-name" style="color:' + p.c + '">' + p.name + '</div>'
+      + '<div class="compare-stat"><div class="compare-stat-label">Leeftijd</div><div class="compare-stat-val cmp-age-' + ci + '">' + st.pts.y + 'j ' + st.pts.m + 'm ' + st.pts.d + 'd</div></div>'
+      + '<div class="compare-stat"><div class="compare-stat-label">Dagen geleefd</div><div class="compare-stat-val cmp-days-' + ci + '">' + fmt(st.dur.totalDays) + '</div></div>'
+      + '<div class="compare-stat"><div class="compare-stat-label">Sterrenbeeld</div><div class="compare-stat-val">' + zodiacSign(p.dob) + ' ' + zodiacName(p.dob) + '</div></div>'
+      + '<div class="compare-stat"><div class="compare-stat-label">Volgende verjaardag</div><div class="compare-stat-val cmp-cd-' + ci + '">' + cdStr(st.nb - now) + '</div></div>'
+      + '</div>';
+
+    if (ci < people.length - 1) {
+      var a = people[ci], b = people[ci+1];
+      var older = a.dob < b.dob ? a : b, younger = a.dob < b.dob ? b : a;
+      var diffMs = Math.abs(a.dob - b.dob);
+      var diffYears = (diffMs / (365.25*24*3600*1000)).toFixed(1);
+      var diffDays = Math.floor(diffMs / 86400000);
+      var awb = ageParts(older.dob, younger.dob);
+      var awbStr = awb.y > 0 ? awb.y + 'j ' + (awb.m > 0 ? awb.m + 'm' : '') : awb.m + 'm';
+      var aL = now - a.dob, bL = now - b.dob;
+      var morePct = ((Math.max(aL,bL) / Math.min(aL,bL) - 1) * 100).toFixed(0);
+      var moreName = aL > bL ? a.name : b.name;
+      var sameZ = zodiacName(a.dob) === zodiacName(b.dob);
+      colsHtml += '<div class="compare-middle">'
+        + '<div class="compare-mid-item"><div class="compare-mid-label">Leeftijdsverschil</div><div class="compare-mid-val accent">' + diffYears + ' jaar / ' + fmt(diffDays) + 'd</div></div>'
+        + '<div class="compare-mid-item"><div class="compare-mid-label">Toen ' + younger.name + ' geboren werd</div><div class="compare-mid-val" style="font-size:10px">' + older.name + ' was al ' + awbStr + '</div></div>'
+        + '<div class="compare-mid-item"><div class="compare-mid-label">Meer geleefd</div><div class="compare-mid-val accent cmp-more-' + ci + '">' + moreName + ' +' + morePct + '%</div></div>'
+        + (sameZ ? '<div class="compare-mid-item"><div class="compare-mid-label">Zelfde sterrenb.</div><div class="compare-mid-val accent">' + zodiacSign(a.dob) + ' ' + zodiacName(a.dob) + '</div></div>' : '')
+        + '</div>';
     }
   }
 
-  res.innerHTML='<div class="compare-cols '+colClass+'">'+colsHtml+'</div>'
-    +'<div class="compare-combined">'
-    +'<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde leeftijd</div><div class="compare-combined-val">'+combinedYears+' jaar</div></div>'
-    +'<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde dagen</div><div class="compare-combined-val">'+fmt(combinedDays)+'</div></div>'
-    +'<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde seconden</div><div class="compare-combined-val">'+fmt(combinedSecs)+'</div></div>'
-    +'</div>';
+  res.innerHTML = '<div class="compare-cols ' + colClass + '">' + colsHtml + '</div>'
+    + '<div class="compare-combined">'
+    + '<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde leeftijd</div><div class="compare-combined-val cmp-comb-years">' + combinedYears + ' jaar</div></div>'
+    + '<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde dagen</div><div class="compare-combined-val cmp-comb-days">' + fmt(combinedDays) + '</div></div>'
+    + '<div class="compare-combined-item"><div class="compare-combined-label">Gecombineerde seconden</div><div class="compare-combined-val cmp-comb-secs">' + fmt(combinedSecs) + '</div></div>'
+    + '</div>';
+
+  // Store refs to dynamic elements for future light updates
+  cmpDynEls = { sides: [] };
+  for (var ci = 0; ci < count; ci++) {
+    cmpDynEls.sides.push({
+      elAge:  res.querySelector('.cmp-age-'  + ci),
+      elDays: res.querySelector('.cmp-days-' + ci),
+      elCd:   res.querySelector('.cmp-cd-'   + ci),
+      elMore: ci < count - 1 ? res.querySelector('.cmp-more-' + ci) : null
+    });
+  }
+  cmpDynEls.elCombYears = res.querySelector('.cmp-comb-years');
+  cmpDynEls.elCombDays  = res.querySelector('.cmp-comb-days');
+  cmpDynEls.elCombSecs  = res.querySelector('.cmp-comb-secs');
+  cmpNeedsRebuild = false;
 }
 
 // ─── SPECTRUM YEAR SCRUBBER ───
@@ -769,60 +815,128 @@ function buildOverview(now) {
 var cardEls = [];
 
 function rebuildCards() {
-  var container=document.getElementById('cards');
-  for (var i=0;i<cardEls.length;i++){
-    if(cardEls[i].el.parentNode) cardEls[i].el.parentNode.removeChild(cardEls[i].el);
+  var container = document.getElementById('cards');
+  for (var i = 0; i < cardEls.length; i++) {
+    if (cardEls[i].el.parentNode) cardEls[i].el.parentNode.removeChild(cardEls[i].el);
   }
-  cardEls=[];
-  var active=activePeople();
-  for (var i=0;i<active.length;i++){
-    var pidx=active[i].i;
-    var card=document.createElement('div');
-    card.className='card';
-    container.appendChild(card);
-    (function(pi){
-      card.onclick=function(e){ if(e.target.classList.contains('card-hide-btn'))return; openFullscreen(pi); };
+  cardEls = [];
+  var active = activePeople();
+  var now = new Date();
+  for (var i = 0; i < active.length; i++) {
+    var pidx = active[i].i;
+    var p = PEOPLE[pidx];
+    var card = document.createElement('div');
+    card.className = 'card';
+    var dur = msDur(now - p.dob);
+    var age = currentAge(p.dob, now);
+    var pts = ageParts(p.dob, now);
+    var nb = nextBirthday(p.dob, now);
+    var isToday = nb.getDate() === now.getDate() && nb.getMonth() === now.getMonth();
+    var msU = nb - now;
+    var prog = yearProgress(p.dob, now);
+    var progPct = (prog * 100).toFixed(1);
+    var wdBorn = WEEKDAYS[p.dob.getDay()];
+    var cn = chineseYear(p.dob);
+
+    card.innerHTML =
+      '<div class="card-topline" style="background:linear-gradient(90deg,transparent 10%,' + p.c + ' 50%,transparent 90%)"></div>'
+      + '<button class="card-hide-btn" title="' + p.name + ' verbergen">\u2715</button>'
+      + '<div class="card-header"><div class="card-name">' + p.name + '</div>'
+      + '<div class="card-icons"><span class="card-zodiac">' + zodiacSign(p.dob) + '</span><span class="card-cn">' + cn.emoji + '</span></div></div>'
+      + '<div class="card-dob">' + nlDate(p.dob) + '</div>'
+      + '<div class="card-weekday">Geboren op ' + wdBorn + ' \u00b7 <span>' + age + '</span> jaar \u00b7 ' + zodiacName(p.dob) + '</div>'
+      + '<div class="stats-grid">'
+      + '<div class="stat"><span class="stat-l">Dagen</span><span class="stat-v big" style="color:' + p.c + '"></span></div>'
+      + '<div class="stat"><span class="stat-l">Seconden</span><span class="stat-v" style="color:' + p.c + '"></span></div>'
+      + '<div class="stat"><span class="stat-l">Uren</span><span class="stat-v"></span></div>'
+      + '<div class="stat"><span class="stat-l">Minuten</span><span class="stat-v"></span></div>'
+      + '</div>'
+      + '<div class="exact-time"><span></span> <span></span> <span></span> <span></span> <span></span> <span></span></div>'
+      + '<div class="bd-block">'
+      + '<div class="bd-label">Volgende verjaardag</div>'
+      + '<div class="bd-today" style="display:' + (isToday ? '' : 'none') + '">\ud83c\udf82 Vandaag jarig!</div>'
+      + '<div class="bd-countdown" style="color:' + p.c + ';display:' + (isToday ? 'none' : '') + '"></div>'
+      + '<div class="bd-bar"><div class="bd-fill" style="background:linear-gradient(90deg,' + p.c + ',transparent)"></div></div>'
+      + '<div class="bd-prog-label"><span>' + MONTHS_NL[p.dob.getMonth()] + ' ' + p.dob.getDate() + '</span><span></span></div>'
+      + '</div>'
+      + '<div class="card-hint">klik voor profiel</div>';
+
+    var statsSpans  = card.querySelectorAll('.stats-grid .stat-v');
+    var exactSpans  = card.querySelectorAll('.exact-time span');
+    var bdProgLabel = card.querySelector('.bd-prog-label');
+
+    (function(pi) {
+      card.onclick = function(e) { if (e.target.classList.contains('card-hide-btn')) return; openFullscreen(pi); };
+      card.querySelector('.card-hide-btn').onclick = function(e) { e.stopPropagation(); hidePerson(pi); };
     })(pidx);
-    cardEls.push({el:card,pidx:pidx});
+
+    var ce = {
+      el:        card,
+      pidx:      pidx,
+      lastAge:   age,
+      elDays:    statsSpans[0],
+      elSecs:    statsSpans[1],
+      elHrs:     statsSpans[2],
+      elMins:    statsSpans[3],
+      elExact:   exactSpans,
+      elToday:   card.querySelector('.bd-today'),
+      elCd:      card.querySelector('.bd-countdown'),
+      elFill:    card.querySelector('.bd-fill'),
+      elPct:     bdProgLabel ? bdProgLabel.querySelectorAll('span')[1] : null,
+      elAgeSpan: card.querySelector('.card-weekday span')
+    };
+
+    ce.elDays.textContent = fmt(dur.totalDays);
+    ce.elSecs.textContent = fmt(dur.totalSecs);
+    ce.elHrs.textContent  = fmt(dur.totalHrs);
+    ce.elMins.textContent = fmt(dur.totalMins);
+    ce.elExact[0].textContent = pts.y + 'j';
+    ce.elExact[1].textContent = pts.m + 'm';
+    ce.elExact[2].textContent = pts.d + 'd';
+    ce.elExact[3].textContent = pad(dur.hrs) + 'u';
+    ce.elExact[4].textContent = pad(dur.mins) + 'm';
+    ce.elExact[5].textContent = pad(dur.secs) + 's';
+    if (!isToday) ce.elCd.textContent = cdStr(msU);
+    ce.elFill.style.width = progPct + '%';
+    if (ce.elPct) ce.elPct.textContent = progPct + '%';
+
+    container.appendChild(card);
+    cardEls.push(ce);
   }
 }
 
 function updateCards(now) {
-  for (var i=0;i<cardEls.length;i++){
-    var pidx=cardEls[i].pidx;
-    var p=PEOPLE[pidx];
-    var dur=msDur(now-p.dob);
-    var age=currentAge(p.dob,now);
-    var pts=ageParts(p.dob,now);
-    var nb=nextBirthday(p.dob,now);
-    var isToday=nb.getDate()===now.getDate()&&nb.getMonth()===now.getMonth();
-    var msU=nb-now;
-    var prog=yearProgress(p.dob,now);
-    var progPct=(prog*100).toFixed(1);
-    var wdBorn=WEEKDAYS[p.dob.getDay()];
-    var cn=chineseYear(p.dob);
+  for (var i = 0; i < cardEls.length; i++) {
+    var ce = cardEls[i];
+    var p = PEOPLE[ce.pidx];
+    var dur = msDur(now - p.dob);
+    var age = currentAge(p.dob, now);
+    var pts = ageParts(p.dob, now);
+    var nb = nextBirthday(p.dob, now);
+    var isToday = nb.getDate() === now.getDate() && nb.getMonth() === now.getMonth();
+    var msU = nb - now;
+    var prog = yearProgress(p.dob, now);
+    var progPct = (prog * 100).toFixed(1);
 
-    cardEls[i].el.innerHTML=
-      '<div class="card-topline" style="background:linear-gradient(90deg,transparent 10%,'+p.c+' 50%,transparent 90%)"></div>'
-      +'<button class="card-hide-btn" title="'+p.name+' verbergen" onclick="hidePerson('+pidx+')">✕</button>'
-      +'<div class="card-header"><div class="card-name">'+p.name+'</div>'
-      +'<div class="card-icons"><span class="card-zodiac">'+zodiacSign(p.dob)+'</span><span class="card-cn">'+cn.emoji+'</span></div></div>'
-      +'<div class="card-dob">'+nlDate(p.dob)+'</div>'
-      +'<div class="card-weekday">Geboren op '+wdBorn+' · '+age+' jaar · '+zodiacName(p.dob)+'</div>'
-      +'<div class="stats-grid">'
-      +'<div class="stat"><span class="stat-l">Dagen</span><span class="stat-v big" style="color:'+p.c+'">'+fmt(dur.totalDays)+'</span></div>'
-      +'<div class="stat"><span class="stat-l">Seconden</span><span class="stat-v" style="color:'+p.c+'">'+fmt(dur.totalSecs)+'</span></div>'
-      +'<div class="stat"><span class="stat-l">Uren</span><span class="stat-v">'+fmt(dur.totalHrs)+'</span></div>'
-      +'<div class="stat"><span class="stat-l">Minuten</span><span class="stat-v">'+fmt(dur.totalMins)+'</span></div>'
-      +'</div>'
-      +'<div class="exact-time"><span>'+pts.y+'j</span> <span>'+pts.m+'m</span> <span>'+pts.d+'d</span> <span>'+pad(dur.hrs)+'u</span> <span>'+pad(dur.mins)+'m</span> <span>'+pad(dur.secs)+'s</span></div>'
-      +'<div class="bd-block">'
-      +'<div class="bd-label">Volgende verjaardag</div>'
-      +(isToday?'<div class="bd-today">🎂 Vandaag jarig!</div>':'<div class="bd-countdown" style="color:'+p.c+'">'+cdStr(msU)+'</div>')
-      +'<div class="bd-bar"><div class="bd-fill" style="width:'+progPct+'%;background:linear-gradient(90deg,'+p.c+',transparent)"></div></div>'
-      +'<div class="bd-prog-label"><span>'+MONTHS_NL[p.dob.getMonth()]+' '+p.dob.getDate()+'</span><span>'+progPct+'%</span></div>'
-      +'</div>'
-      +'<div class="card-hint">klik voor profiel</div>';
+    ce.elDays.textContent = fmt(dur.totalDays);
+    ce.elSecs.textContent = fmt(dur.totalSecs);
+    ce.elHrs.textContent  = fmt(dur.totalHrs);
+    ce.elMins.textContent = fmt(dur.totalMins);
+    ce.elExact[0].textContent = pts.y + 'j';
+    ce.elExact[1].textContent = pts.m + 'm';
+    ce.elExact[2].textContent = pts.d + 'd';
+    ce.elExact[3].textContent = pad(dur.hrs) + 'u';
+    ce.elExact[4].textContent = pad(dur.mins) + 'm';
+    ce.elExact[5].textContent = pad(dur.secs) + 's';
+    ce.elToday.style.display = isToday ? '' : 'none';
+    ce.elCd.style.display    = isToday ? 'none' : '';
+    if (!isToday) ce.elCd.textContent = cdStr(msU);
+    ce.elFill.style.width = progPct + '%';
+    if (ce.elPct) ce.elPct.textContent = progPct + '%';
+    if (age !== ce.lastAge) {
+      if (ce.elAgeSpan) ce.elAgeSpan.textContent = age;
+      ce.lastAge = age;
+    }
   }
 }
 
@@ -1243,6 +1357,7 @@ rebuildCards();
 renderHiddenPanel();
 buildCompareSelectors();
 updateTijdlijnColors();
+updateSpectrumYearUI();
 buildCalendar();
 tick();
 setInterval(tick,1000);
