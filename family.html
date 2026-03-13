@@ -15,7 +15,7 @@
   --ff-mono:'IBM Plex Mono',monospace;
 }
 body { background:var(--bg); color:var(--text); font-family:var(--ff-mono); min-height:100vh; padding:40px 20px 80px; overflow-x:hidden; }
-body::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse 100% 40% at 20% 0%,rgba(168,103,232,.04),transparent),radial-gradient(ellipse 80% 50% at 80% 100%,rgba(103,181,232,.03),transparent); pointer-events:none; z-index:0; }
+body::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse 120% 50% at 15% 0%,rgba(168,103,232,.055),transparent 60%),radial-gradient(ellipse 90% 60% at 85% 100%,rgba(103,181,232,.04),transparent 60%),radial-gradient(ellipse 55% 45% at 50% 48%,rgba(200,169,126,.022),transparent 70%); pointer-events:none; z-index:0; }
 .wrap { max-width:1080px; margin:0 auto; position:relative; z-index:1; }
 
 /* HEADER */
@@ -108,11 +108,11 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
 /* CARDS */
 .section-label { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; }
 .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; position:relative; overflow:hidden; transition:border-color .25s,background .25s; animation:fadeUp .5s ease both; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; position:relative; overflow:hidden; transition:border-color .25s,background .25s; animation:fadeUp .5s ease both; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .card:hover { background:var(--card-hover); }
 .card-topline { position:absolute; top:0; left:0; right:0; height:1px; opacity:.5; }
 .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; }
-.card-name { font-family:var(--ff-serif); font-size:1.45rem; font-weight:400; color:var(--white); line-height:1; }
+.card-name { font-family:var(--ff-serif); font-size:1.5rem; font-weight:400; color:var(--white); line-height:1; }
 .card-icons { display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1; opacity:.7; }
 .card-zodiac { font-size:16px; line-height:1; }
 .card-cn { font-size:13px; line-height:1; }
@@ -256,6 +256,45 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
 .pack-btn-action { font-size:9px; color:var(--muted2); letter-spacing:.08em; margin-left:2px; }
 .pack-btn.active .pack-btn-action { color:var(--muted); }
 
+/* SPECTRUM SIDEBAR */
+.spectrum-sidebar { display:none; position:fixed; left:0; top:0; bottom:0; width:66px; background:rgba(9,9,9,.97); border-right:1px solid var(--border); z-index:200; flex-direction:column; }
+.sp-sb-top { padding:13px 6px 10px; display:flex; flex-direction:column; align-items:center; gap:5px; border-bottom:1px solid var(--border); }
+.sp-sb-year-row { display:flex; align-items:center; gap:4px; }
+.sp-sb-year { font-family:var(--ff-mono); font-size:11px; font-weight:500; color:var(--white); letter-spacing:.02em; }
+.sp-sb-ynav { display:flex; flex-direction:column; gap:2px; }
+.sp-sb-btn { background:none; border:1px solid var(--border-light); border-radius:3px; color:var(--muted); font-size:9px; width:18px; height:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color .15s,border-color .15s; line-height:1; padding:0; font-family:var(--ff-mono); }
+.sp-sb-btn:hover { color:var(--white); border-color:var(--muted); }
+.sp-sb-now { font-size:8px; color:var(--muted2); cursor:pointer; background:none; border:none; font-family:var(--ff-mono); letter-spacing:.03em; padding:0; opacity:0; transition:opacity .2s,color .15s; pointer-events:none; }
+.sp-sb-now.vis { opacity:1; pointer-events:auto; }
+.sp-sb-now:hover { color:var(--text); }
+.sp-sb-inner { flex:1; position:relative; overflow:hidden; }
+.sp-sb-axis { position:absolute; left:33px; top:4%; bottom:4%; width:1px; background:var(--border); }
+.sp-sb-tick { position:absolute; right:34px; font-size:7px; color:var(--muted2); font-family:var(--ff-mono); line-height:1; transform:translateY(-50%); }
+.sp-sb-tick::after { content:''; position:absolute; right:-5px; top:50%; width:4px; height:1px; background:var(--muted2); transform:translateY(-50%); }
+.sp-sb-person { position:absolute; left:0; right:0; display:flex; justify-content:center; align-items:center; height:22px; cursor:pointer; transform:translateY(-50%); }
+.sp-sb-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; transition:transform .2s; }
+.sp-sb-person:hover .sp-sb-dot { transform:scale(1.65); }
+.sp-sb-tip { position:absolute; left:50px; background:var(--card); border:1px solid var(--border-light); border-radius:6px; padding:5px 10px; font-size:10px; font-family:var(--ff-mono); color:var(--white); white-space:nowrap; opacity:0; transition:opacity .15s; pointer-events:none; top:50%; transform:translateY(-50%); z-index:201; box-shadow:0 4px 20px rgba(0,0,0,.6); }
+.sp-sb-tip-age { font-size:8px; color:var(--muted); display:block; margin-top:2px; }
+.sp-sb-person:hover .sp-sb-tip { opacity:1; }
+@media(min-width:900px) {
+  .spectrum-sidebar { display:flex; }
+  .spectrum-wrap { display:none; }
+  body { padding-left:90px; }
+}
+
+/* SPECTRUM MOBILE ARROWS */
+.spectrum-arrow-btn { background:none; border:1px solid var(--border-light); border-radius:5px; color:var(--muted); font-family:var(--ff-mono); font-size:12px; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color .15s,border-color .15s; -webkit-tap-highlight-color:transparent; }
+.spectrum-arrow-btn:hover { color:var(--white); border-color:var(--muted); }
+
+/* CONCEPTION BLOCK */
+.conception-block { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 20px; }
+.conception-label { font-size:10px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+.conception-dates { font-family:var(--ff-serif); font-size:1.15rem; color:var(--white); margin-bottom:10px; line-height:1.3; }
+.conception-badges { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+.conception-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,.035); border:1px solid var(--border-light); border-radius:20px; padding:4px 11px; font-size:10px; color:var(--muted); font-family:var(--ff-mono); }
+.conception-note { font-size:10px; color:var(--muted2); line-height:1.6; font-style:italic; }
+
 /* ANIMS */
 @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.8);opacity:.4} }
@@ -287,6 +326,20 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
 </style>
 </head>
 <body>
+<div class="spectrum-sidebar" id="spectrum-sidebar">
+  <div class="sp-sb-top">
+    <div class="sp-sb-year-row">
+      <span class="sp-sb-year" id="sp-sb-year">2026</span>
+      <div class="sp-sb-ynav">
+        <button class="sp-sb-btn" id="sp-sb-up" title="Later jaar">▲</button>
+        <button class="sp-sb-btn" id="sp-sb-down" title="Eerder jaar">▼</button>
+      </div>
+    </div>
+    <button class="sp-sb-now" id="sp-sb-now">nu</button>
+  </div>
+  <div class="sp-sb-inner" id="sp-sb-inner"></div>
+</div>
+
 <div class="wrap">
   <header class="header">
     <h1>Familie <em id="tijdlijn-word"><span class="h1-letter">t</span><span class="h1-letter">i</span><span class="h1-letter">j</span><span class="h1-letter">d</span><span class="h1-letter">l</span><span class="h1-letter">i</span><span class="h1-letter">j</span><span class="h1-letter">n</span></em></h1>
@@ -308,7 +361,9 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
       <div class="spectrum-title">Leeftijdsoverzicht — klik voor profiel</div>
       <div class="spectrum-year-widget">
         <button class="spectrum-now-btn hidden" id="spectrum-now-btn">terug naar nu</button>
+        <button class="spectrum-arrow-btn" id="spectrum-arr-prev" title="Eerder jaar">◀</button>
         <div class="spectrum-year-box" id="spectrum-year-box" title="Scroll om jaar te wisselen"></div>
+        <button class="spectrum-arrow-btn" id="spectrum-arr-next" title="Later jaar">▶</button>
       </div>
     </div>
     <div class="spectrum" id="spectrum"><div class="spectrum-axis"></div></div>
@@ -616,6 +671,21 @@ function getSeason(dob) {
   return'Herfst';
 }
 
+function conceptionRange(dob) {
+  // Fertilization to birth ≈ 266 days (38 weeks), ±10 days
+  return {
+    early: new Date(dob.getTime() - 276 * 86400000),
+    late:  new Date(dob.getTime() - 256 * 86400000)
+  };
+}
+function conceptionSeason(d) {
+  var m=d.getMonth();
+  if(m<2||m===11) return'\u2744\ufe0f Winter';
+  if(m<5) return'\ud83c\udf38 Lente';
+  if(m<8) return'\u2600\ufe0f Zomer';
+  return'\ud83c\udf42 Herfst';
+}
+
 // ─── COMPARE TOGGLE ───
 var cmpOpen = true;
 document.getElementById('cmp-toggle').onclick = function() {
@@ -806,6 +876,7 @@ function updateSpectrumYearUI() {
   } else {
     btn.classList.add('hidden');
   }
+  updateSidebarYearUI();
 }
 
 (function(){
@@ -882,7 +953,93 @@ function buildSpectrum() {
     sp.appendChild(dot);
   }
   spectrumDone = true;
+  buildSpectrumSidebar();
 }
+
+function buildSpectrumSidebar() {
+  var inner = document.getElementById('sp-sb-inner');
+  if (!inner) return;
+  inner.innerHTML = '';
+
+  var refDate = spectrumRefDate();
+  var active = activePeople();
+  var maxAge = 0;
+  for (var i = 0; i < active.length; i++) {
+    var a = (refDate - active[i].p.dob) / (365.25 * 24 * 3600 * 1000);
+    if (a > maxAge) maxAge = a;
+  }
+  maxAge = Math.ceil(maxAge / 10) * 10 + 5;
+  if (maxAge < 10) maxAge = 10;
+
+  var axis = document.createElement('div');
+  axis.className = 'sp-sb-axis';
+  inner.appendChild(axis);
+
+  for (var t = 0; t <= maxAge; t += 10) {
+    var tick = document.createElement('div');
+    tick.className = 'sp-sb-tick';
+    // oldest at top (low top%), youngest at bottom (high top%)
+    tick.style.top = ((1 - t / maxAge) * 90 + 5) + '%';
+    tick.textContent = t;
+    inner.appendChild(tick);
+  }
+
+  for (var i = 0; i < active.length; i++) {
+    var p = active[i].p, pidx = active[i].i;
+    var ageF = (refDate - p.dob) / (365.25 * 24 * 3600 * 1000);
+    if (ageF < 0) continue;
+    var topPct = (1 - ageF / maxAge) * 90 + 5;
+
+    var person = document.createElement('div');
+    person.className = 'sp-sb-person';
+    person.style.top = topPct + '%';
+    person.innerHTML =
+      '<div class="sp-sb-dot" style="background:' + p.c + ';box-shadow:0 0 7px ' + p.c + '55"></div>'
+      + '<div class="sp-sb-tip"><span style="color:' + p.c + '">' + p.name + '</span>'
+      + '<span class="sp-sb-tip-age">' + ageF.toFixed(1) + ' jaar</span></div>';
+
+    (function(ri) {
+      person.onclick = function() { if (spectrumYear === null) openFullscreen(ri); };
+    })(pidx);
+    inner.appendChild(person);
+  }
+  updateSidebarYearUI();
+}
+
+function updateSidebarYearUI() {
+  var yearEl = document.getElementById('sp-sb-year');
+  var nowBtn = document.getElementById('sp-sb-now');
+  if (!yearEl) return;
+  var now = new Date();
+  yearEl.textContent = spectrumYear === null ? now.getFullYear() : spectrumYear;
+  if (nowBtn) {
+    if (spectrumYear !== null && spectrumYear !== now.getFullYear()) nowBtn.classList.add('vis');
+    else nowBtn.classList.remove('vis');
+  }
+}
+
+// ─── SIDEBAR + MOBILE ARROW CONTROLS ───
+(function() {
+  function changeSpectrumYear(dir) {
+    var now = new Date();
+    var cur = spectrumYear === null ? now.getFullYear() : spectrumYear;
+    spectrumYear = cur + dir;
+    if (spectrumYear === now.getFullYear()) spectrumYear = null;
+    updateSpectrumYearUI();
+    spectrumDone = false;
+    buildSpectrum();
+  }
+  var sbUp   = document.getElementById('sp-sb-up');
+  var sbDown = document.getElementById('sp-sb-down');
+  var sbNow  = document.getElementById('sp-sb-now');
+  var arrPrev = document.getElementById('spectrum-arr-prev');
+  var arrNext = document.getElementById('spectrum-arr-next');
+  if (sbUp)   sbUp.onclick   = function() { changeSpectrumYear(+1); };
+  if (sbDown) sbDown.onclick = function() { changeSpectrumYear(-1); };
+  if (sbNow)  sbNow.onclick  = function() { spectrumYear=null; updateSpectrumYearUI(); buildSpectrum(); };
+  if (arrPrev) arrPrev.onclick = function() { changeSpectrumYear(-1); };
+  if (arrNext) arrNext.onclick = function() { changeSpectrumYear(+1); };
+})();
 
 // ─── OVERVIEW ───
 var overviewDone = false;
@@ -1110,6 +1267,11 @@ function renderFS(idx,now) {
   if(nextRound===age) nextRound+=10;
   var roundDate=new Date(p.dob.getFullYear()+nextRound,p.dob.getMonth(),p.dob.getDate());
   var daysToRound=Math.round((roundDate-now)/86400000);
+  var moonCycles=Math.floor(dur.totalDays/29.53);
+  var hairCm=Math.round(dur.totalDays*0.0411);
+  var hairStr=hairCm>=200?(hairCm/100).toFixed(1)+' meter':hairCm+' cm';
+  var conc=conceptionRange(p.dob);
+  var concSeas=conceptionSeason(conc.early);
 
   var mls=getMilestones(p.dob,now);
   var tlHTML='';
@@ -1170,22 +1332,38 @@ function renderFS(idx,now) {
     +'<div style="margin-top:12px">'+bdRows+'</div>'
     +'</div>'
 
+    +'<div class="fs-section"><div class="fs-section-title">\ud83c\udf31 Jij bestond al!</div>'
+    +'<div class="conception-block">'
+    +'<div class="conception-label">Waarschijnlijk verwekt ergens tussen</div>'
+    +'<div class="conception-dates">'+conc.early.getDate()+' '+MONTHS_NL[conc.early.getMonth()]+' en '+conc.late.getDate()+' '+MONTHS_NL[conc.late.getMonth()]+' '+conc.early.getFullYear()+'</div>'
+    +'<div class="conception-badges">'
+    +'<span class="conception-badge">'+concSeas+'</span>'
+    +'<span class="conception-badge">\u231b ~9 maanden voor geboorte</span>'
+    +'<span class="conception-badge">\ud83d\udcc5 '+conc.early.getFullYear()+'</span>'
+    +'</div>'
+    +'<div class="conception-note">Op dat magische moment begon jij als het allerkleinste beginnetje \ud83e\udd0f &mdash; kleiner dan een stofje!</div>'
+    +'</div></div>'
+
     +'<div class="fs-section"><div class="fs-section-title">Levenscijfers</div>'
     +'<div class="fs-grid">'
-    +'<div class="fs-item"><div class="fs-item-label">Hartslagen ♥</div><div class="fs-item-val" id="fs-heartbeats">'+fmt(Math.round(dur.totalSecs*(66/60)))+'</div><div class="fs-item-sub">~66/min · live</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Ademhalingen</div><div class="fs-item-val" id="fs-breaths">'+fmt(Math.round(dur.totalSecs*(15/60)))+'</div><div class="fs-item-sub">~15/min · live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Hartslagen \u2665</div><div class="fs-item-val" id="fs-heartbeats">'+fmt(Math.round(dur.totalSecs*(66/60)))+'</div><div class="fs-item-sub">~66/min \xb7 live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Ademhalingen</div><div class="fs-item-val" id="fs-breaths">'+fmt(Math.round(dur.totalSecs*(15/60)))+'</div><div class="fs-item-sub">~15/min \xb7 live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Oogknipperingen \ud83d\udc41</div><div class="fs-item-val" id="fs-blinks">'+fmt(Math.round(dur.totalSecs*(10/60)))+'</div><div class="fs-item-sub">~10/min \xb7 live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Stappen gelopen \ud83d\udc63</div><div class="fs-item-val" id="fs-steps">'+fmt(Math.round(dur.totalDays*7500))+'</div><div class="fs-item-sub">~7.500/dag schatting</div></div>'
     +'<div class="fs-item"><div class="fs-item-label">Slaapdagen</div><div class="fs-item-val">'+fmt(sleepDays)+'</div><div class="fs-item-sub">~33% van het leven</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Schrikkeljaren</div><div class="fs-item-val">'+leapYears+'</div><div class="fs-item-sub">elke ~4 jaar</div></div>'
     +'<div class="fs-item"><div class="fs-item-label">Weekenddagen</div><div class="fs-item-val">'+fmt(weekends)+'</div><div class="fs-item-sub">~28% van de dagen</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Maanrondes \ud83c\udf19</div><div class="fs-item-val">'+moonCycles+'</div><div class="fs-item-sub">1 rondje = 29,5 dagen</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Schrikkeljaren</div><div class="fs-item-val">'+leapYears+'</div><div class="fs-item-sub">elke ~4 jaar</div></div>'
     +'<div class="fs-item"><div class="fs-item-label">Dag van het jaar</div><div class="fs-item-val">dag '+dayOfYear+'</div><div class="fs-item-sub">in '+p.dob.getFullYear()+'</div></div>'
     +'</div></div>'
 
     +'<div class="fs-section"><div class="fs-section-title">Weetjes</div>'
     +'<div class="funfacts">'
     +'<div class="funfact"><strong>Volgende ronde verjaardag</strong>Wordt '+nextRound+' jaar over '+(daysToRound>0?daysToRound+' dagen':'reeds voorbij')+'</div>'
-    +'<div class="funfact"><strong>Seizoen geboren</strong>'+seas+' · op een '+wdBorn+'</div>'
+    +'<div class="funfact"><strong>Seizoen geboren</strong>'+seas+' \xb7 op een '+wdBorn+'</div>'
     +'<div class="funfact"><strong>Sterrenbeeld</strong>'+z+' '+zn+'</div>'
-    +'<div class="funfact"><strong>Leeftijd in weken</strong>'+fmt(Math.floor(dur.totalDays/7))+' weken</div>'
+    +'<div class="funfact"><strong>Haar gegroeid \ud83d\udc87</strong>In totaal ~'+hairStr+' aan haar gegroeid in het leven</div>'
+    +'<div class="funfact"><strong>Leeftijd in weken</strong>'+fmt(Math.floor(dur.totalDays/7))+' weken oud</div>'
     +'<div class="funfact" style="grid-column:1/-1;border-color:'+p.c+'33;display:flex;align-items:center;justify-content:space-between;gap:16px">'
     +'<div><strong style="color:'+p.c+'">Chinees dierenriem</strong>Het jaar '+cn.year+' was het jaar van de <strong style="color:'+p.c+'">'+cn.animal+'</strong></div>'
     +'<span style="font-size:2.6rem;line-height:1;flex-shrink:0">'+cn.emoji+'</span>'
@@ -1219,6 +1397,8 @@ function openFullscreen(idx) {
     set('fs-bd-cd',  isToday?'🎂 Vandaag jarig!':cdStr(nb-now));
     set('fs-heartbeats', fmt(Math.round(dur.totalSecs*(66/60))));
     set('fs-breaths',    fmt(Math.round(dur.totalSecs*(15/60))));
+    set('fs-blinks',     fmt(Math.round(dur.totalSecs*(10/60))));
+    set('fs-steps',      fmt(Math.round(dur.totalDays*7500)));
   },1000);
 }
 
