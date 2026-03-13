@@ -242,6 +242,20 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
 /* CREDIT */
 .credit { text-align:right; font-size:9px; color:var(--muted2); letter-spacing:.06em; margin-top:24px; padding-top:16px; border-top:1px solid var(--border); }
 
+/* PACKS */
+.packs-section { margin-top:32px; padding-top:24px; border-top:1px solid var(--border); }
+.packs-label { font-size:9px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; }
+.packs-list { display:flex; flex-wrap:wrap; gap:10px; }
+.pack-btn { background:var(--card); border:1px solid var(--border-light); border-radius:24px; color:var(--muted); font-family:var(--ff-mono); font-size:11px; padding:9px 16px; cursor:pointer; display:flex; align-items:center; gap:8px; letter-spacing:.05em; transition:border-color .2s,color .2s,background .2s; -webkit-tap-highlight-color:transparent; }
+.pack-btn:hover { color:var(--text); border-color:var(--muted2); }
+.pack-btn.active { background:rgba(255,255,255,.04); border-color:var(--muted); color:var(--white); }
+.pack-btn-emoji { font-size:14px; line-height:1; }
+.pack-btn-name { font-weight:500; }
+.pack-dots { display:flex; gap:3px; align-items:center; }
+.pack-member-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.pack-btn-action { font-size:9px; color:var(--muted2); letter-spacing:.08em; margin-left:2px; }
+.pack-btn.active .pack-btn-action { color:var(--muted); }
+
 /* ANIMS */
 @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.8);opacity:.4} }
@@ -324,6 +338,7 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
     <div class="cal-grid" id="cal-grid"></div>
   </div>
 
+  <div class="packs-section" id="packs-section"></div>
   <div class="credit">gemaakt en bedacht op 12 maart 2026</div>
 </div>
 
@@ -372,12 +387,104 @@ var PEOPLE = [
 var WEEKDAYS  = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
 var MONTHS_NL = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
 
+// ─── PACKS ───
+var PACKS = [
+  {
+    id: 'waterman',
+    label: 'Water Man',
+    emoji: '\ud83d\udca7',
+    people: [
+      { name:'Ollie', dob:new Date(2014,2,11), c:'#8ba84a' },
+      { name:'Nina',  dob:new Date(1986,2,4),  c:'#c0256f' },
+      { name:'Tygo',  dob:new Date(2017,1,17), c:'#1ab8c4' }
+    ]
+  }
+];
+
+// Assign stable indices to all pack people (starting after base PEOPLE)
+var PACK_REGISTRY = [];
+(function() {
+  var next = PEOPLE.length;
+  for (var pi = 0; pi < PACKS.length; pi++) {
+    for (var mi = 0; mi < PACKS[pi].people.length; mi++) {
+      PACK_REGISTRY.push({ p: PACKS[pi].people[mi], packId: PACKS[pi].id, idx: next++ });
+    }
+  }
+})();
+
+var PACK_ACTIVE = {};
+
+function getPerson(idx) {
+  if (idx < PEOPLE.length) return PEOPLE[idx];
+  for (var i = 0; i < PACK_REGISTRY.length; i++) {
+    if (PACK_REGISTRY[i].idx === idx) return PACK_REGISTRY[i].p;
+  }
+  return null;
+}
+
+function togglePack(packId) {
+  if (PACK_ACTIVE[packId]) {
+    delete PACK_ACTIVE[packId];
+    // Remove hidden state for this pack's members
+    for (var i = 0; i < PACK_REGISTRY.length; i++) {
+      if (PACK_REGISTRY[i].packId === packId) delete hiddenPeople[PACK_REGISTRY[i].idx];
+    }
+    // Clean cmpSel of now-invalid indices
+    var stillActive = {};
+    var ap = activePeople();
+    for (var j = 0; j < ap.length; j++) stillActive[ap[j].i] = true;
+    var cleaned = [];
+    for (var j = 0; j < cmpSel.length; j++) { if (stillActive[cmpSel[j]]) cleaned.push(cmpSel[j]); }
+    if (cleaned.length < 2 && ap.length >= 2) cleaned = [ap[0].i, ap[1].i];
+    cmpSel = cleaned;
+  } else {
+    PACK_ACTIVE[packId] = true;
+  }
+  renderPacksUI();
+  rebuildAll();
+  checkBirthdayConfetti(new Date());
+}
+
+function renderPacksUI() {
+  var section = document.getElementById('packs-section');
+  if (!section) return;
+  section.innerHTML = '';
+  var label = document.createElement('div');
+  label.className = 'packs-label';
+  label.textContent = 'Extra pakketten';
+  section.appendChild(label);
+  var list = document.createElement('div');
+  list.className = 'packs-list';
+  for (var pi = 0; pi < PACKS.length; pi++) {
+    var pack = PACKS[pi];
+    var isActive = !!PACK_ACTIVE[pack.id];
+    var btn = document.createElement('button');
+    btn.className = 'pack-btn' + (isActive ? ' active' : '');
+    var dotsHtml = '';
+    for (var mi = 0; mi < pack.people.length; mi++) {
+      dotsHtml += '<span class="pack-member-dot" style="background:' + pack.people[mi].c + '"></span>';
+    }
+    btn.innerHTML =
+      '<span class="pack-btn-emoji">' + pack.emoji + '</span>'
+      + '<span class="pack-btn-name">' + pack.label + '</span>'
+      + '<span class="pack-dots">' + dotsHtml + '</span>'
+      + '<span class="pack-btn-action">' + (isActive ? 'verwijderen' : pack.people.length + ' personen') + '</span>';
+    (function(pid) { btn.onclick = function() { togglePack(pid); }; })(pack.id);
+    list.appendChild(btn);
+  }
+  section.appendChild(list);
+}
+
 // ─── VISIBILITY ───
 var hiddenPeople = {};
 
 function activePeople() {
   var out = [];
-  for (var i=0;i<PEOPLE.length;i++) { if (!hiddenPeople[i]) out.push({p:PEOPLE[i],i:i}); }
+  for (var i = 0; i < PEOPLE.length; i++) { if (!hiddenPeople[i]) out.push({p:PEOPLE[i], i:i}); }
+  for (var i = 0; i < PACK_REGISTRY.length; i++) {
+    var entry = PACK_REGISTRY[i];
+    if (PACK_ACTIVE[entry.packId] && !hiddenPeople[entry.idx]) out.push({p:entry.p, i:entry.idx});
+  }
   return out;
 }
 function hidePerson(idx)  { hiddenPeople[idx]=true;  rebuildAll(); }
@@ -418,7 +525,8 @@ function renderHiddenPanel() {
   panel.classList.add('has-items');
   chips.innerHTML = '';
   for (var i=0;i<keys.length;i++) {
-    var idx=keys[i], p=PEOPLE[idx];
+    var idx=keys[i], p=getPerson(idx);
+    if (!p) continue;
     var chip = document.createElement('div');
     chip.className = 'hidden-chip';
     chip.innerHTML = '<div class="hidden-chip-dot" style="background:'+p.c+'"></div>'
@@ -579,7 +687,7 @@ function updateCompare(now) {
   res.classList.add('visible');
 
   var people = [];
-  for (var i = 0; i < count; i++) people.push(PEOPLE[indices[i]]);
+  for (var i = 0; i < count; i++) { var pp = getPerson(indices[i]); if (pp) people.push(pp); }
 
   // ── Light update (per-second tick, no structural change) ──
   if (!cmpNeedsRebuild && cmpDynEls) {
@@ -824,7 +932,8 @@ function rebuildCards() {
   var now = new Date();
   for (var i = 0; i < active.length; i++) {
     var pidx = active[i].i;
-    var p = PEOPLE[pidx];
+    var p = getPerson(pidx);
+    if (!p) continue;
     var card = document.createElement('div');
     card.className = 'card';
     var dur = msDur(now - p.dob);
@@ -908,7 +1017,8 @@ function rebuildCards() {
 function updateCards(now) {
   for (var i = 0; i < cardEls.length; i++) {
     var ce = cardEls[i];
-    var p = PEOPLE[ce.pidx];
+    var p = getPerson(ce.pidx);
+    if (!p) continue;
     var dur = msDur(now - p.dob);
     var age = currentAge(p.dob, now);
     var pts = ageParts(p.dob, now);
@@ -976,7 +1086,8 @@ function getMilestones(dob,now) {
 }
 
 function renderFS(idx,now) {
-  var p=PEOPLE[idx];
+  var p=getPerson(idx);
+  if (!p) return;
   var dur=msDur(now-p.dob), age=currentAge(p.dob,now), pts=ageParts(p.dob,now);
   var nb=nextBirthday(p.dob,now), prog=yearProgress(p.dob,now);
   var isToday=nb.getDate()===now.getDate()&&nb.getMonth()===now.getMonth();
@@ -1095,7 +1206,8 @@ function openFullscreen(idx) {
   if (fsTick) clearInterval(fsTick);
   fsTick=setInterval(function(){
     if (fsIdx<0) return;
-    var now=new Date(), p=PEOPLE[fsIdx];
+    var now=new Date(), p=getPerson(fsIdx);
+    if (!p) { closeFullscreen(); return; }
     var dur=msDur(now-p.dob), pts=ageParts(p.dob,now), nb=nextBirthday(p.dob,now);
     var isToday=nb.getDate()===now.getDate()&&nb.getMonth()===now.getMonth();
     function set(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
@@ -1120,6 +1232,122 @@ function closeFullscreen() {
 document.getElementById('fs-close').onclick=closeFullscreen;
 document.getElementById('fs-bg').onclick=closeFullscreen;
 
+// ─── CONFETTI ───
+var confettiCanvas = null, confettiCtx = null;
+var confettiParticles = [], confettiAnimating = false;
+
+function initConfettiCanvas() {
+  confettiCanvas = document.createElement('canvas');
+  confettiCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9998;';
+  document.body.appendChild(confettiCanvas);
+  confettiCtx = confettiCanvas.getContext('2d');
+  resizeConfetti();
+  window.addEventListener('resize', resizeConfetti);
+}
+function resizeConfetti() {
+  if (!confettiCanvas) return;
+  confettiCanvas.width  = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+
+function launchConfetti(colors) {
+  if (!confettiCanvas) initConfettiCanvas();
+  var W = confettiCanvas.width, H = confettiCanvas.height;
+  // Two cannons at bottom corners, shooting inward and up
+  var cannons = [
+    { x: W * 0.12, y: H * 0.95, aMin: -Math.PI * 0.82, aMax: -Math.PI * 0.45 },
+    { x: W * 0.88, y: H * 0.95, aMin: -Math.PI * 0.55, aMax: -Math.PI * 0.18 }
+  ];
+  // Extend palette with white and gold for extra sparkle
+  var palette = colors.slice();
+  palette.push('#ffffff', '#f5d76e');
+  var perCannon = 110;
+  for (var ci = 0; ci < cannons.length; ci++) {
+    var c = cannons[ci];
+    for (var i = 0; i < perCannon; i++) {
+      var angle = c.aMin + Math.random() * (c.aMax - c.aMin);
+      var speed = 9 + Math.random() * 14;
+      var sr = Math.random();
+      var shape = sr < 0.55 ? 'rect' : sr < 0.80 ? 'circle' : 'ribbon';
+      var w = shape === 'ribbon' ? 2 + Math.random() * 3  : 6 + Math.random() * 9;
+      var h = shape === 'ribbon' ? 18 + Math.random() * 20 : 4 + Math.random() * 7;
+      confettiParticles.push({
+        x:      c.x + (Math.random() - 0.5) * 30,
+        y:      c.y,
+        vx:     Math.cos(angle) * speed,
+        vy:     Math.sin(angle) * speed,
+        rot:    Math.random() * Math.PI * 2,
+        rotSpd: (Math.random() - 0.5) * 0.22,
+        wob:    Math.random() * Math.PI * 2,
+        wobSpd: 0.025 + Math.random() * 0.055,
+        wobAmp: 0.6   + Math.random() * 2.0,
+        grav:   0.22  + Math.random() * 0.18,
+        drag:   0.988,
+        w: w, h: h, shape: shape,
+        col:   palette[Math.floor(Math.random() * palette.length)],
+        alpha: 1
+      });
+    }
+  }
+  if (!confettiAnimating) { confettiAnimating = true; requestAnimationFrame(tickConfetti); }
+}
+
+function tickConfetti() {
+  var W = confettiCanvas.width, H = confettiCanvas.height;
+  confettiCtx.clearRect(0, 0, W, H);
+  var alive = 0;
+  for (var i = 0; i < confettiParticles.length; i++) {
+    var p = confettiParticles[i];
+    if (p.alpha <= 0) continue;
+    alive++;
+    p.vx *= p.drag;
+    p.vy  = p.vy * p.drag + p.grav;
+    p.wob += p.wobSpd;
+    p.x   += p.vx + Math.sin(p.wob) * p.wobAmp;
+    p.y   += p.vy;
+    p.rot += p.rotSpd;
+    if (p.y > H * 0.80) p.alpha -= 0.022;
+    if (p.x < -80 || p.x > W + 80) { p.alpha = 0; continue; }
+    confettiCtx.save();
+    confettiCtx.globalAlpha = p.alpha > 0 ? p.alpha : 0;
+    confettiCtx.translate(p.x, p.y);
+    confettiCtx.rotate(p.rot);
+    confettiCtx.fillStyle = p.col;
+    if (p.shape === 'circle') {
+      // Disc that flattens as it rotates (simulates spinning)
+      var sy = Math.abs(Math.sin(p.rot * 1.3)) * 0.7 + 0.15;
+      confettiCtx.scale(1, sy);
+      confettiCtx.beginPath();
+      confettiCtx.arc(0, 0, p.w * 0.5, 0, Math.PI * 2);
+      confettiCtx.fill();
+    } else if (p.shape === 'ribbon') {
+      confettiCtx.fillRect(-p.w * 0.5, -p.h * 0.5, p.w, p.h);
+    } else {
+      // Rectangle that flips on its axis (3D effect)
+      var sy2 = Math.abs(Math.cos(p.rot * 1.5));
+      confettiCtx.scale(1, sy2 < 0.08 ? 0.08 : sy2);
+      confettiCtx.fillRect(-p.w * 0.5, -p.h * 0.5, p.w, p.h);
+    }
+    confettiCtx.restore();
+  }
+  if (alive > 0) {
+    requestAnimationFrame(tickConfetti);
+  } else {
+    confettiCtx.clearRect(0, 0, W, H);
+    confettiAnimating = false;
+    confettiParticles = [];
+  }
+}
+
+function checkBirthdayConfetti(now) {
+  var colors = [], active = activePeople();
+  for (var i = 0; i < active.length; i++) {
+    var dob = active[i].p.dob;
+    if (dob.getMonth() === now.getMonth() && dob.getDate() === now.getDate()) colors.push(active[i].p.c);
+  }
+  if (colors.length) launchConfetti(colors);
+}
+
 // ─── MAIN TICK ───
 function tick() {
   var now=new Date();
@@ -1130,6 +1358,7 @@ function tick() {
   if (!spectrumDone) buildSpectrum();
   if (!overviewDone) buildOverview(now);
   else if (now.getSeconds()===0) buildOverview(now);
+  if (now.getHours()===0 && now.getMinutes()===0 && now.getSeconds()===0) checkBirthdayConfetti(now);
 }
 
 // ─── CALENDAR ───
@@ -1359,8 +1588,10 @@ buildCompareSelectors();
 updateTijdlijnColors();
 updateSpectrumYearUI();
 buildCalendar();
+renderPacksUI();
 tick();
 setInterval(tick,1000);
+checkBirthdayConfetti(new Date());
 </script>
 </body>
 </html>
