@@ -2109,17 +2109,17 @@ document.addEventListener('keydown',function(e){
 var ADDER_COLORS = ['#e867a0','#e8d44a','#a267e8','#e87c30','#4ab0e8','#c867e8','#e84040','#4ae880','#1a6b3a','#5b4aad','#f0c060','#60c0f0','#f06060','#60f080'];
 var adderSelColor = ADDER_COLORS[0];
 
-(function(){
-  var wrap = document.getElementById('adder-modal-wrap');
+function initAdder() {
+  var wrap    = document.getElementById('adder-modal-wrap');
   var trigger = document.getElementById('adder-trigger');
-  var cancel = document.getElementById('adder-cancel');
-  var bg = document.getElementById('adder-modal-bg');
+  var cancel  = document.getElementById('adder-cancel');
+  var bg      = document.getElementById('adder-modal-bg');
   var confirm = document.getElementById('adder-confirm');
-  var nameEl = document.getElementById('adder-name');
-  var dobEl = document.getElementById('adder-dob');
-  var colorsEl = document.getElementById('adder-colors');
+  var nameEl  = document.getElementById('adder-name');
+  var dobEl   = document.getElementById('adder-dob');
+  var colorsEl= document.getElementById('adder-colors');
+  if (!wrap || !trigger || !colorsEl) return;
 
-  // Build color swatches
   for (var ci = 0; ci < ADDER_COLORS.length; ci++) {
     (function(c) {
       var sw = document.createElement('div');
@@ -2134,16 +2134,15 @@ var adderSelColor = ADDER_COLORS[0];
     })(ADDER_COLORS[ci]);
   }
 
-  function openAdder() { wrap.classList.remove('hidden'); nameEl.focus(); }
-  function closeAdder() { wrap.classList.add('hidden'); nameEl.value=''; dobEl.value=''; }
+  function openAdder()  { wrap.classList.remove('hidden'); if (nameEl) nameEl.focus(); }
+  function closeAdder() { wrap.classList.add('hidden'); if (nameEl) nameEl.value=''; if (dobEl) dobEl.value=''; }
 
-  if (trigger) trigger.onclick = openAdder;
-  if (cancel)  cancel.onclick  = closeAdder;
-  if (bg)      bg.onclick      = closeAdder;
-
+  trigger.onclick = openAdder;
+  if (cancel)  cancel.onclick = closeAdder;
+  if (bg)      bg.onclick     = closeAdder;
   if (confirm) confirm.onclick = function() {
-    var name = nameEl.value.trim();
-    var dobVal = dobEl.value;
+    var name = nameEl ? nameEl.value.trim() : '';
+    var dobVal = dobEl ? dobEl.value : '';
     if (!name || !dobVal) return;
     var parts = dobVal.split('-');
     var dob = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
@@ -2154,7 +2153,8 @@ var adderSelColor = ADDER_COLORS[0];
     rebuildAll();
     checkBirthdayConfetti(new Date());
   };
-})();
+}
+window.addEventListener('load', initAdder);
 
 // ─── INIT ───
 rebuildCards();
