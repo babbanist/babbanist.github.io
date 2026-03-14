@@ -331,9 +331,28 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
 .cmp-val-val { color:var(--white); font-variant-numeric:tabular-nums; }
 
 /* CARD OPEN ANIM */
-@keyframes cardFlipOpen { 0%{transform:perspective(700px) rotateY(0deg) scale(1)} 35%{transform:perspective(700px) rotateY(22deg) scale(1.02)} 65%{transform:perspective(700px) rotateY(-6deg) scale(1.01)} 100%{transform:perspective(700px) rotateY(0deg) scale(1)} }
-.card.opening { animation:cardFlipOpen .42s cubic-bezier(.4,0,.2,1) both; }
+@keyframes cardFlipOpen { 0%{transform:perspective(800px) rotateY(0deg) scale(1)} 30%{transform:perspective(800px) rotateY(28deg) scale(1.03)} 60%{transform:perspective(800px) rotateY(-8deg) scale(1.01)} 80%{transform:perspective(800px) rotateY(4deg) scale(1)} 100%{transform:perspective(800px) rotateY(0deg) scale(1)} }
+.card.opening { animation:cardFlipOpen .52s cubic-bezier(.25,.46,.45,.94) both; }
+
+/* FS ENTRANCE */
 @keyframes fsEntrance { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fsSlideIn { from{opacity:0;transform:translateY(32px) scale(.97)} to{opacity:1;transform:none} }
+.fs-overlay.open .fs-content { animation:fsSlideIn .46s cubic-bezier(.25,.46,.45,.94) both; }
+
+/* SECTION STAGGER */
+.fs-section { animation:fsEntrance .38s cubic-bezier(.25,.46,.45,.94) both; }
+.fs-section:nth-child(1){ animation-delay:.05s }
+.fs-section:nth-child(2){ animation-delay:.10s }
+.fs-section:nth-child(3){ animation-delay:.15s }
+.fs-section:nth-child(4){ animation-delay:.20s }
+.fs-section:nth-child(5){ animation-delay:.25s }
+
+/* HOVER micro-lift on cards */
+.card { transition:border-color .25s,background .25s,transform .22s cubic-bezier(.25,.46,.45,.94),box-shadow .22s; }
+.card:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,0,0,.35); }
+
+/* LIVE STRIP FADE */
+.fs-live-strip { animation:fsEntrance .4s cubic-bezier(.25,.46,.45,.94) .04s both; }
 
 /* BIRTHDAY LIST */
 .bd-analytics { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
@@ -533,6 +552,15 @@ var PACKS = [
       { name:'Nina',  dob:new Date(1986,2,4),  c:'#c0256f' },
       { name:'Tygo',  dob:new Date(2017,1,17), c:'#1ab8c4' }
     ]
+  },
+  {
+    id: 'frends',
+    label: 'Frends',
+    emoji: '\u2605',
+    people: [
+      { name:'Lucas', dob:new Date(2008,2,13),  c:'#1a6b3a' },
+      { name:'Beau',  dob:new Date(2008,11,12), c:'#5b4aad' }
+    ]
   }
 ];
 
@@ -557,6 +585,9 @@ function getPerson(idx) {
   if (idx < PEOPLE.length) return PEOPLE[idx];
   for (var i = 0; i < PACK_REGISTRY.length; i++) {
     if (PACK_REGISTRY[i].idx === idx) return PACK_REGISTRY[i].p;
+  }
+  for (var i = 0; i < CUSTOM_PEOPLE.length; i++) {
+    if (CUSTOM_PEOPLE[i].idx === idx) return CUSTOM_PEOPLE[i].p;
   }
   return null;
 }
@@ -623,6 +654,10 @@ function activePeople() {
   for (var i = 0; i < PACK_REGISTRY.length; i++) {
     var entry = PACK_REGISTRY[i];
     if (PACK_ACTIVE[entry.packId] && !hiddenPeople[entry.idx]) out.push({p:entry.p, i:entry.idx});
+  }
+  for (var i = 0; i < CUSTOM_PEOPLE.length; i++) {
+    var ce = CUSTOM_PEOPLE[i];
+    if (!hiddenPeople[ce.idx]) out.push({p:ce.p, i:ce.idx});
   }
   return out;
 }
@@ -1215,10 +1250,15 @@ function rebuildCards() {
     var exactSpans  = card.querySelectorAll('.exact-time span');
     var bdProgLabel = card.querySelector('.bd-prog-label');
 
-    (function(pi) {
-      card.onclick = function(e) { if (e.target.classList.contains('card-hide-btn')) return; openFullscreen(pi); };
-      card.querySelector('.card-hide-btn').onclick = function(e) { e.stopPropagation(); hidePerson(pi); };
-    })(pidx);
+    (function(pi, cardEl) {
+      cardEl.onclick = function(e) {
+        if (e.target.classList.contains('card-hide-btn') || e.target.classList.contains('card-remove-btn')) return;
+        cardEl.classList.add('opening');
+        setTimeout(function(){ cardEl.classList.remove('opening'); }, 480);
+        openFullscreen(pi);
+      };
+      cardEl.querySelector('.card-hide-btn').onclick = function(e) { e.stopPropagation(); hidePerson(pi); };
+    })(pidx, card);
 
     var ce = {
       el:        card,
@@ -1294,6 +1334,228 @@ function updateCards(now) {
 // ─── FULLSCREEN ───
 var fsIdx = -1, fsTick = null;
 
+// ─── FS COMPARE & SECTION STATE ───
+var fsSectionCmps = {};    // secId → personIdx
+var fsGlobalCmpIdx = null; // null or personIdx
+var fsBdCount = 3;
+var fsCmpPickerOpen = null;
+
+function toggleFsSection(el) {
+  el.classList.toggle('collapsed');
+}
+
+function closeFsCmpPicker() {
+  if (fsCmpPickerOpen) {
+    var id = 'fscmp-picker-' + fsCmpPickerOpen;
+    var el = document.getElementById(id);
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+    fsCmpPickerOpen = null;
+  }
+}
+
+function fsCmpClick(e, btn) {
+  e.stopPropagation();
+  var secId = btn.getAttribute('data-sec');
+  if (fsCmpPickerOpen === secId) { closeFsCmpPicker(); return; }
+  closeFsCmpPicker();
+  var picker = document.createElement('div');
+  picker.className = 'fs-cmp-picker-wrap';
+  picker.id = 'fscmp-picker-' + secId;
+  var active = activePeople();
+  for (var i = 0; i < active.length; i++) {
+    if (active[i].i === fsIdx) continue;
+    (function(idx, p) {
+      var row = document.createElement('div');
+      row.className = 'cmp-pick-row';
+      row.innerHTML = '<div class="cmp-pick-dot" style="background:' + p.c + '"></div>' + p.name;
+      row.onclick = function(ev) {
+        ev.stopPropagation();
+        fsSectionCmps[secId] = idx;
+        closeFsCmpPicker();
+        renderFsCmpPanel(secId);
+        btn.classList.add('active');
+      };
+      picker.appendChild(row);
+    })(active[i].i, active[i].p);
+  }
+  btn.style.position = 'relative';
+  btn.appendChild(picker);
+  fsCmpPickerOpen = secId;
+}
+
+document.addEventListener('click', function(){ closeFsCmpPicker(); });
+
+function fsCmpStop(secId) {
+  delete fsSectionCmps[secId];
+  var slot = document.getElementById(secId + '-cmp');
+  if (slot) slot.innerHTML = '';
+  var btn = document.querySelector('.fs-cmp-btn[data-sec="' + secId + '"]');
+  if (btn) btn.classList.remove('active');
+}
+
+function fsGlobalCmpOpen() {
+  closeFsCmpPicker();
+  var bar = document.getElementById('fs-global-cmp-bar');
+  if (!bar) return;
+  var picker = document.createElement('div');
+  picker.className = 'fs-cmp-picker-wrap';
+  picker.id = 'fscmp-picker-global';
+  var active = activePeople();
+  for (var i = 0; i < active.length; i++) {
+    if (active[i].i === fsIdx) continue;
+    (function(idx, p) {
+      var row = document.createElement('div');
+      row.className = 'cmp-pick-row';
+      row.innerHTML = '<div class="cmp-pick-dot" style="background:' + p.c + '"></div>' + p.name;
+      row.onclick = function(ev) { ev.stopPropagation(); fsGlobalCmpStart(idx); };
+      picker.appendChild(row);
+    })(active[i].i, active[i].p);
+  }
+  bar.style.position = 'relative';
+  bar.appendChild(picker);
+  fsCmpPickerOpen = 'global';
+}
+
+function fsGlobalCmpStart(idx) {
+  fsGlobalCmpIdx = idx;
+  var secs = ['fs-sec-age','fs-sec-bd','fs-sec-stats','fs-sec-facts','fs-sec-miles'];
+  for (var i = 0; i < secs.length; i++) renderFsCmpPanel(secs[i]);
+  var p = getPerson(idx);
+  var bar = document.getElementById('fs-global-cmp-bar');
+  if (bar && p) {
+    bar.innerHTML = '<span class="fs-cmpall-active">Vergeleken met <span style="color:' + p.c + '">' + p.name + '</span>'
+      + '<button class="fs-cmpall-stop" onclick="fsGlobalCmpStop()">stop</button></span>';
+  }
+  closeFsCmpPicker();
+}
+
+function fsGlobalCmpStop() {
+  fsGlobalCmpIdx = null;
+  var secs = ['fs-sec-age','fs-sec-bd','fs-sec-stats','fs-sec-facts','fs-sec-miles'];
+  for (var i = 0; i < secs.length; i++) {
+    var slot = document.getElementById(secs[i] + '-cmp');
+    if (slot) slot.innerHTML = '';
+    var btn = document.querySelector('.fs-cmp-btn[data-sec="' + secs[i] + '"]');
+    if (btn) btn.classList.remove('active');
+  }
+  var bar = document.getElementById('fs-global-cmp-bar');
+  if (bar) bar.innerHTML = '<button class="fs-cmpall-btn" onclick="fsGlobalCmpOpen()">Vergelijk alles met 1 persoon...</button>';
+}
+
+function renderFsCmpPanel(secId) {
+  var slot = document.getElementById(secId + '-cmp');
+  if (!slot) return;
+  var idx = fsGlobalCmpIdx !== null ? fsGlobalCmpIdx : fsSectionCmps[secId];
+  if (idx === undefined || idx === null) { slot.innerHTML = ''; return; }
+  var p = getPerson(idx);
+  if (!p) { slot.innerHTML = ''; return; }
+  var now = new Date();
+  var age = currentAge(p.dob, now);
+  var dur = msDur(now - p.dob);
+  var pts = ageParts(p.dob, now);
+  var nb = nextBirthday(p.dob, now);
+  var cn = chineseYear(p.dob);
+  var content = '';
+  if (secId === 'fs-sec-age') {
+    content = '<div class="cmp-val-row"><span class="cmp-val-label">Leeftijd</span><span class="cmp-val-val">' + pts.y + 'j ' + pts.m + 'm ' + pts.d + 'd</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Dagen geleefd</span><span class="cmp-val-val">' + fmt(dur.totalDays) + '</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Seconden</span><span class="cmp-val-val">' + fmt(dur.totalSecs) + '</span></div>';
+  } else if (secId === 'fs-sec-bd') {
+    content = '<div class="cmp-val-row"><span class="cmp-val-label">Verjaardag</span><span class="cmp-val-val">' + p.dob.getDate() + ' ' + MONTHS_NL[p.dob.getMonth()] + '</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Volgende</span><span class="cmp-val-val">' + cdStr(nb - now) + '</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Wordt</span><span class="cmp-val-val">' + (age + 1) + ' jaar</span></div>';
+  } else if (secId === 'fs-sec-stats') {
+    var sleepD = Math.round(dur.totalDays * 0.33);
+    content = '<div class="cmp-val-row"><span class="cmp-val-label">Hartslagen</span><span class="cmp-val-val">' + fmt(Math.round(dur.totalSecs * (66/60))) + '</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Ademhalingen</span><span class="cmp-val-val">' + fmt(Math.round(dur.totalSecs * (15/60))) + '</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Slaapdagen</span><span class="cmp-val-val">' + fmt(sleepD) + '</span></div>';
+  } else if (secId === 'fs-sec-facts') {
+    content = '<div class="cmp-val-row"><span class="cmp-val-label">Sterrenb.</span><span class="cmp-val-val">' + zodiacSign(p.dob) + ' ' + zodiacName(p.dob) + '</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Seizoen</span><span class="cmp-val-val">' + getSeason(p.dob) + '</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Dierenjaar</span><span class="cmp-val-val">' + cn.emoji + ' ' + cn.animal + '</span></div>';
+  } else if (secId === 'fs-sec-miles') {
+    content = '<div class="cmp-val-row"><span class="cmp-val-label">Leeftijd</span><span class="cmp-val-val">' + age + ' jaar</span></div>'
+      + '<div class="cmp-val-row"><span class="cmp-val-label">Geboren</span><span class="cmp-val-val">' + nlDate(p.dob) + '</span></div>';
+  }
+  slot.innerHTML = '<div class="fs-cmp-panel" style="background:' + p.c + '11;border:1px solid ' + p.c + '44;border-radius:8px;padding:10px 14px;margin-top:10px;">'
+    + '<div class="fs-cmp-panel-hd" style="margin-bottom:6px">'
+    + '<span class="fs-cmp-panel-name" style="color:' + p.c + '">' + p.name + '</span>'
+    + (fsGlobalCmpIdx === null ? '<button class="fs-cmp-panel-stop" onclick="fsCmpStop(\'' + secId + '\')">&#x2715;</button>' : '')
+    + '</div>'
+    + content + '</div>';
+}
+
+function mkFsSec(secId, title, content) {
+  return '<div class="fs-section" id="' + secId + '">'
+    + '<div class="fs-section-hd" onclick="toggleFsSection(this.parentNode)">'
+    + '<span class="fs-section-title">' + title + '</span>'
+    + '<div class="fs-section-controls">'
+    + '<button class="fs-cmp-btn" data-sec="' + secId + '" onclick="fsCmpClick(event,this)" title="Vergelijk">&#9776;</button>'
+    + '<span class="fs-section-chev">&#8963;</span>'
+    + '</div></div>'
+    + '<div class="fs-section-bd"><div class="fs-section-bd-inner">'
+    + content
+    + '<div id="' + secId + '-cmp"></div>'
+    + '</div></div></div>';
+}
+
+function fsBdAnalytics(p, now, age) {
+  var maxFutureAge = age + 30;
+  var counts = [0,0,0,0,0,0,0];
+  for (var yr = now.getFullYear(); yr <= p.dob.getFullYear() + maxFutureAge; yr++) {
+    var d = new Date(yr, p.dob.getMonth(), p.dob.getDate());
+    if (d > now) counts[d.getDay()]++;
+  }
+  var maxC = -1, maxD = 0, minC = Infinity, minD = 0;
+  for (var i = 0; i < 7; i++) {
+    if (counts[i] > maxC) { maxC = counts[i]; maxD = i; }
+    if (counts[i] < minC && counts[i] > 0) { minC = counts[i]; minD = i; }
+  }
+  var thisYrBd = new Date(now.getFullYear(), p.dob.getMonth(), p.dob.getDate());
+  var nextBdWd = (thisYrBd > now) ? WEEKDAYS[thisYrBd.getDay()]
+    : WEEKDAYS[new Date(now.getFullYear()+1, p.dob.getMonth(), p.dob.getDate()).getDay()];
+  return { maxDay: WEEKDAYS[maxD], minDay: WEEKDAYS[minD], nextDay: nextBdWd };
+}
+
+function renderFsBdRows() {
+  var el = document.getElementById('fs-bd-rows');
+  if (!el || fsIdx < 0) return;
+  var p = getPerson(fsIdx);
+  if (!p) return;
+  var now = new Date();
+  var age = currentAge(p.dob, now);
+  var maxAge = age + 30;
+  var rows = '', shown = 0, checkY = now.getFullYear();
+  while (shown < fsBdCount) {
+    var bdD = new Date(checkY, p.dob.getMonth(), p.dob.getDate());
+    var bdAge = checkY - p.dob.getFullYear();
+    if (bdAge > maxAge) break;
+    if (bdD > now) {
+      var dDiff = Math.floor((bdD - now) / 86400000);
+      rows += '<div class="bd-row">'
+        + '<span class="bd-row-age" style="color:' + p.c + '">' + bdAge + '</span>'
+        + '<span class="bd-row-date">' + nlDate(bdD) + ' \xb7 ' + WEEKDAYS[bdD.getDay()] + '</span>'
+        + '<span class="bd-row-diff">' + dDiff + 'd</span>'
+        + '</div>';
+      shown++;
+    }
+    checkY++;
+    if (checkY > p.dob.getFullYear() + maxAge + 2) break;
+  }
+  var canMore = false;
+  for (var ty = checkY; ty <= p.dob.getFullYear() + maxAge; ty++) {
+    var tbd = new Date(ty, p.dob.getMonth(), p.dob.getDate());
+    if (tbd > now) { canMore = true; break; }
+  }
+  if (canMore) rows += '<button class="bd-more-btn" onclick="fsBdMore()">meer zien</button>';
+  el.innerHTML = rows;
+}
+
+function fsBdMore() {
+  fsBdCount += 3;
+  renderFsBdRows();
+}
+
 function getMilestones(dob,now) {
   var age=currentAge(dob,now);
   var list=[
@@ -1327,6 +1589,8 @@ function getMilestones(dob,now) {
 }
 
 function renderFS(idx,now) {
+  fsBdCount = 3;
+  fsSectionCmps = {};
   var p=getPerson(idx);
   if (!p) return;
   var dur=msDur(now-p.dob), age=currentAge(p.dob,now), pts=ageParts(p.dob,now);
@@ -1355,7 +1619,7 @@ function renderFS(idx,now) {
   var hairCm=Math.round(dur.totalDays*0.0411);
   var hairStr=hairCm>=200?(hairCm/100).toFixed(1)+' meter':hairCm+' cm';
   var conc=conceptionRange(p.dob);
-  var concSeas=conceptionSeason(conc.early);
+  var concStr=conc.early.getDate()+' '+MONTHS_NL[conc.early.getMonth()]+' \u2013 '+conc.late.getDate()+' '+MONTHS_NL[conc.late.getMonth()]+' '+conc.early.getFullYear();
 
   var mls=getMilestones(p.dob,now);
   var tlHTML='';
@@ -1369,93 +1633,86 @@ function renderFS(idx,now) {
       +'</div>';
   }
 
-  // upcoming 3 birthdays
-  var bdRows='';
-  var bdCount=0;
-  var checkY=now.getFullYear();
-  while(bdCount<3){
-    var bdD=new Date(checkY,p.dob.getMonth(),p.dob.getDate());
-    if(bdD>now){
-      var bdAge=checkY-p.dob.getFullYear();
-      var dDiff=Math.floor((bdD-now)/86400000);
-      bdRows+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px;">'
-        +'<span style="color:'+p.c+';font-family:var(--ff-serif);font-size:1rem;min-width:32px">'+bdAge+'</span>'
-        +'<span style="color:var(--text)">'+nlDate(bdD)+' · '+WEEKDAYS[bdD.getDay()]+'</span>'
-        +'<span style="color:var(--muted);font-variant-numeric:tabular-nums;margin-left:8px">'+dDiff+'d</span>'
-        +'</div>';
-      bdCount++;
-    }
-    checkY++;
-  }
+  // Birthday analytics
+  var bdAn = fsBdAnalytics(p, now, age);
+  var analyticsHTML = '<div class="bd-analytics">'
+    +'<div class="bd-stat"><div class="bd-stat-label">Vaakste dag</div><div class="bd-stat-val" style="color:'+p.c+'">'+bdAn.maxDay+'</div></div>'
+    +'<div class="bd-stat"><div class="bd-stat-label">Minst voor</div><div class="bd-stat-val">'+bdAn.minDay+'</div></div>'
+    +'<div class="bd-stat"><div class="bd-stat-label">Volgende op</div><div class="bd-stat-val">'+bdAn.nextDay+'</div></div>'
+    +'</div>';
 
   var firstName=p.name.slice(0,-1), lastChar=p.name.slice(-1);
+
+  var secAge = mkFsSec('fs-sec-age','Exacte leeftijd',
+    '<div class="fs-pulse-row"><div class="pulse-dot" style="background:'+p.c+'"></div><div class="pulse-label">Live</div>'
+    +'<div class="pulse-val" id="fs-exact">'+pts.y+'j '+pts.m+'m '+pts.d+'d '+pad(dur.hrs)+'u '+pad(dur.mins)+'m '+pad(dur.secs)+'s</div></div>');
+
+  var secBd = mkFsSec('fs-sec-bd','Verjaardag',
+    '<div class="bd-ring-wrap">'+ringHTML
+    +'<div class="bd-ring-info"><div class="bd-ring-cd" style="color:'+p.c+'" id="fs-bd-cd">'+(isToday?'Vandaag jarig!':cdStr(msU))+'</div>'
+    +'<div class="bd-ring-sub">Volgende: '+nlDate(nb)+' \xb7 wordt '+(age+1)+' jaar<br>'+(prog*100).toFixed(1)+'% van verjaardagsjaar voorbij</div>'
+    +'</div></div>'
+    + analyticsHTML
+    +'<div id="fs-bd-rows"></div>');
+
+  var secStats = mkFsSec('fs-sec-stats','Levenscijfers',
+    '<div class="fs-grid">'
+    +'<div class="fs-item"><div class="fs-item-label">Hartslagen</div><div class="fs-item-val" id="fs-heartbeats">'+fmt(Math.round(dur.totalSecs*(66/60)))+'</div><div class="fs-item-sub">~66/min \xb7 live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Ademhalingen</div><div class="fs-item-val" id="fs-breaths">'+fmt(Math.round(dur.totalSecs*(15/60)))+'</div><div class="fs-item-sub">~15/min \xb7 live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Oogknipperingen</div><div class="fs-item-val" id="fs-blinks">'+fmt(Math.round(dur.totalSecs*(10/60)))+'</div><div class="fs-item-sub">~10/min \xb7 live</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Stappen gelopen</div><div class="fs-item-val" id="fs-steps">'+fmt(Math.round(dur.totalDays*7500))+'</div><div class="fs-item-sub">~7.500/dag schatting</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Slaapdagen</div><div class="fs-item-val">'+fmt(sleepDays)+'</div><div class="fs-item-sub">~33% van het leven</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Weekenddagen</div><div class="fs-item-val">'+fmt(weekends)+'</div><div class="fs-item-sub">~28% van de dagen</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Maanrondes</div><div class="fs-item-val">'+moonCycles+'</div><div class="fs-item-sub">1 rondje = 29,5 dagen</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Schrikkeljaren</div><div class="fs-item-val">'+leapYears+'</div><div class="fs-item-sub">elke ~4 jaar</div></div>'
+    +'<div class="fs-item"><div class="fs-item-label">Dag van het jaar</div><div class="fs-item-val">dag '+dayOfYear+'</div><div class="fs-item-sub">in '+p.dob.getFullYear()+'</div></div>'
+    +'</div>');
+
+  var secFacts = mkFsSec('fs-sec-facts','Weetjes',
+    '<div class="funfacts">'
+    +'<div class="funfact"><strong>Volgende ronde verjaardag</strong>Wordt '+nextRound+' jaar over '+(daysToRound>0?daysToRound+' dagen':'reeds voorbij')+'</div>'
+    +'<div class="funfact"><strong>Seizoen geboren</strong>'+seas+' \xb7 op een '+wdBorn+'</div>'
+    +'<div class="funfact"><strong>Sterrenbeeld</strong>'+z+' '+zn+'</div>'
+    +'<div class="funfact"><strong>Haar gegroeid</strong>In totaal ~'+hairStr+' aan haar gegroeid in het leven</div>'
+    +'<div class="funfact"><strong>Leeftijd in weken</strong>'+fmt(Math.floor(dur.totalDays/7))+' weken oud</div>'
+    +'<div class="funfact"><strong>Verwekt tussen</strong>'+concStr+'</div>'
+    +'<div class="funfact" style="grid-column:1/-1;border-color:'+p.c+'33;display:flex;align-items:center;justify-content:space-between;gap:16px">'
+    +'<div><strong style="color:'+p.c+'">Chinees dierenriem</strong>Het jaar '+cn.year+' was het jaar van de <strong style="color:'+p.c+'">'+cn.animal+'</strong></div>'
+    +'<span style="font-size:2.6rem;line-height:1;flex-shrink:0">'+cn.emoji+'</span>'
+    +'</div>'
+    +'</div>');
+
+  var secMiles = mkFsSec('fs-sec-miles','Mijlpalen',
+    '<div class="timeline">'+tlHTML+'</div>');
+
+  var globalCmpBar = '<div class="fs-cmpall-bar" id="fs-global-cmp-bar">'
+    +'<button class="fs-cmpall-btn" onclick="fsGlobalCmpOpen()">Vergelijk alles met 1 persoon...</button>'
+    +'</div>';
 
   document.getElementById('fs-inner').innerHTML=
     '<div class="fs-hero">'
     +'<div><div class="fs-name">'+firstName+'<em style="color:'+p.c+'">'+lastChar+'</em></div>'
-    +'<div class="fs-meta">'+nlDate(p.dob)+' · '+wdBorn+'<br>'+z+' '+zn+' · '+seas+'</div></div>'
+    +'<div class="fs-meta">'+nlDate(p.dob)+' \xb7 '+wdBorn+'<br>'+z+' '+zn+' \xb7 '+seas+'</div></div>'
     +'<div class="fs-age-hero"><div class="fs-age-big" style="color:'+p.c+'">'+age+'</div><div class="fs-age-label">jaar oud</div></div>'
     +'</div>'
-
     +'<div class="fs-live-strip">'
     +'<div class="fs-live-card"><div class="fs-live-label">Dagen</div><div class="fs-live-val" style="color:'+p.c+'" id="fs-days">'+fmt(dur.totalDays)+'</div></div>'
     +'<div class="fs-live-card"><div class="fs-live-label">Uren</div><div class="fs-live-val" id="fs-hrs">'+fmt(dur.totalHrs)+'</div></div>'
     +'<div class="fs-live-card"><div class="fs-live-label">Minuten</div><div class="fs-live-val" id="fs-mins">'+fmt(dur.totalMins)+'</div></div>'
     +'<div class="fs-live-card"><div class="fs-live-label">Seconden</div><div class="fs-live-val" style="color:'+p.c+'" id="fs-secs">'+fmt(dur.totalSecs)+'</div></div>'
     +'</div>'
+    + globalCmpBar
+    + secAge + secBd + secStats + secFacts + secMiles;
 
-    +'<div class="fs-section"><div class="fs-section-title">Exacte leeftijd</div>'
-    +'<div class="fs-pulse-row"><div class="pulse-dot" style="background:'+p.c+'"></div><div class="pulse-label">Live</div>'
-    +'<div class="pulse-val" id="fs-exact">'+pts.y+'j '+pts.m+'m '+pts.d+'d '+pad(dur.hrs)+'u '+pad(dur.mins)+'m '+pad(dur.secs)+'s</div></div></div>'
+  renderFsBdRows();
 
-    +'<div class="fs-section"><div class="fs-section-title">Verjaardag</div>'
-    +'<div class="bd-ring-wrap">'+ringHTML
-    +'<div class="bd-ring-info"><div class="bd-ring-cd" style="color:'+p.c+'" id="fs-bd-cd">'+(isToday?'🎂 Vandaag jarig!':cdStr(msU))+'</div>'
-    +'<div class="bd-ring-sub">Volgende: '+nlDate(nb)+' · wordt '+(age+1)+' jaar<br>'+(prog*100).toFixed(1)+'% van verjaardagsjaar voorbij</div>'
-    +'</div></div>'
-    +'<div style="margin-top:12px">'+bdRows+'</div>'
-    +'</div>'
-
-    +'<div class="fs-section"><div class="fs-section-title">\ud83c\udf31 Jij bestond al!</div>'
-    +'<div class="conception-block">'
-    +'<div class="conception-label">Waarschijnlijk verwekt ergens tussen</div>'
-    +'<div class="conception-dates">'+conc.early.getDate()+' '+MONTHS_NL[conc.early.getMonth()]+' en '+conc.late.getDate()+' '+MONTHS_NL[conc.late.getMonth()]+' '+conc.early.getFullYear()+'</div>'
-    +'<div class="conception-badges">'
-    +'<span class="conception-badge">'+concSeas+'</span>'
-    +'<span class="conception-badge">\u231b ~9 maanden voor geboorte</span>'
-    +'<span class="conception-badge">\ud83d\udcc5 '+conc.early.getFullYear()+'</span>'
-    +'</div>'
-    +'<div class="conception-note">Op dat magische moment begon jij als het allerkleinste beginnetje \ud83e\udd0f &mdash; kleiner dan een stofje!</div>'
-    +'</div></div>'
-
-    +'<div class="fs-section"><div class="fs-section-title">Levenscijfers</div>'
-    +'<div class="fs-grid">'
-    +'<div class="fs-item"><div class="fs-item-label">Hartslagen \u2665</div><div class="fs-item-val" id="fs-heartbeats">'+fmt(Math.round(dur.totalSecs*(66/60)))+'</div><div class="fs-item-sub">~66/min \xb7 live</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Ademhalingen</div><div class="fs-item-val" id="fs-breaths">'+fmt(Math.round(dur.totalSecs*(15/60)))+'</div><div class="fs-item-sub">~15/min \xb7 live</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Oogknipperingen \ud83d\udc41</div><div class="fs-item-val" id="fs-blinks">'+fmt(Math.round(dur.totalSecs*(10/60)))+'</div><div class="fs-item-sub">~10/min \xb7 live</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Stappen gelopen \ud83d\udc63</div><div class="fs-item-val" id="fs-steps">'+fmt(Math.round(dur.totalDays*7500))+'</div><div class="fs-item-sub">~7.500/dag schatting</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Slaapdagen</div><div class="fs-item-val">'+fmt(sleepDays)+'</div><div class="fs-item-sub">~33% van het leven</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Weekenddagen</div><div class="fs-item-val">'+fmt(weekends)+'</div><div class="fs-item-sub">~28% van de dagen</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Maanrondes \ud83c\udf19</div><div class="fs-item-val">'+moonCycles+'</div><div class="fs-item-sub">1 rondje = 29,5 dagen</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Schrikkeljaren</div><div class="fs-item-val">'+leapYears+'</div><div class="fs-item-sub">elke ~4 jaar</div></div>'
-    +'<div class="fs-item"><div class="fs-item-label">Dag van het jaar</div><div class="fs-item-val">dag '+dayOfYear+'</div><div class="fs-item-sub">in '+p.dob.getFullYear()+'</div></div>'
-    +'</div></div>'
-
-    +'<div class="fs-section"><div class="fs-section-title">Weetjes</div>'
-    +'<div class="funfacts">'
-    +'<div class="funfact"><strong>Volgende ronde verjaardag</strong>Wordt '+nextRound+' jaar over '+(daysToRound>0?daysToRound+' dagen':'reeds voorbij')+'</div>'
-    +'<div class="funfact"><strong>Seizoen geboren</strong>'+seas+' \xb7 op een '+wdBorn+'</div>'
-    +'<div class="funfact"><strong>Sterrenbeeld</strong>'+z+' '+zn+'</div>'
-    +'<div class="funfact"><strong>Haar gegroeid \ud83d\udc87</strong>In totaal ~'+hairStr+' aan haar gegroeid in het leven</div>'
-    +'<div class="funfact"><strong>Leeftijd in weken</strong>'+fmt(Math.floor(dur.totalDays/7))+' weken oud</div>'
-    +'<div class="funfact" style="grid-column:1/-1;border-color:'+p.c+'33;display:flex;align-items:center;justify-content:space-between;gap:16px">'
-    +'<div><strong style="color:'+p.c+'">Chinees dierenriem</strong>Het jaar '+cn.year+' was het jaar van de <strong style="color:'+p.c+'">'+cn.animal+'</strong></div>'
-    +'<span style="font-size:2.6rem;line-height:1;flex-shrink:0">'+cn.emoji+'</span>'
-    +'</div>'
-    +'</div></div>'
-
-    +'<div class="fs-section"><div class="fs-section-title">Mijlpalen</div>'
-    +'<div class="timeline">'+tlHTML+'</div></div>';
+  if (fsGlobalCmpIdx !== null) {
+    var secs2 = ['fs-sec-age','fs-sec-bd','fs-sec-stats','fs-sec-facts','fs-sec-miles'];
+    for (var si = 0; si < secs2.length; si++) renderFsCmpPanel(secs2[si]);
+    var p2 = getPerson(fsGlobalCmpIdx);
+    var bar2 = document.getElementById('fs-global-cmp-bar');
+    if (bar2 && p2) bar2.innerHTML = '<span class="fs-cmpall-active">Vergeleken met <span style="color:'+p2.c+'">'+p2.name+'</span><button class="fs-cmpall-stop" onclick="fsGlobalCmpStop()">stop</button></span>';
+  }
 }
 
 function openFullscreen(idx) {
@@ -1488,6 +1745,9 @@ function openFullscreen(idx) {
 
 function closeFullscreen() {
   fsIdx=-1;
+  fsSectionCmps={};
+  fsGlobalCmpIdx=null;
+  closeFsCmpPicker();
   document.getElementById('fs-overlay').classList.remove('open');
   document.body.style.overflow='';
   if (fsTick){clearInterval(fsTick);fsTick=null;}
@@ -1844,6 +2104,57 @@ document.addEventListener('keydown',function(e){
     if(e.key==='ArrowLeft') document.getElementById('tour-prev').click();
   }
 });
+
+// ─── ADDER ───
+var ADDER_COLORS = ['#e867a0','#e8d44a','#a267e8','#e87c30','#4ab0e8','#c867e8','#e84040','#4ae880','#1a6b3a','#5b4aad','#f0c060','#60c0f0','#f06060','#60f080'];
+var adderSelColor = ADDER_COLORS[0];
+
+(function(){
+  var wrap = document.getElementById('adder-modal-wrap');
+  var trigger = document.getElementById('adder-trigger');
+  var cancel = document.getElementById('adder-cancel');
+  var bg = document.getElementById('adder-modal-bg');
+  var confirm = document.getElementById('adder-confirm');
+  var nameEl = document.getElementById('adder-name');
+  var dobEl = document.getElementById('adder-dob');
+  var colorsEl = document.getElementById('adder-colors');
+
+  // Build color swatches
+  for (var ci = 0; ci < ADDER_COLORS.length; ci++) {
+    (function(c) {
+      var sw = document.createElement('div');
+      sw.className = 'adder-color' + (c === adderSelColor ? ' sel' : '');
+      sw.style.background = c;
+      sw.onclick = function() {
+        adderSelColor = c;
+        colorsEl.querySelectorAll('.adder-color').forEach(function(el){ el.classList.remove('sel'); });
+        sw.classList.add('sel');
+      };
+      colorsEl.appendChild(sw);
+    })(ADDER_COLORS[ci]);
+  }
+
+  function openAdder() { wrap.classList.remove('hidden'); nameEl.focus(); }
+  function closeAdder() { wrap.classList.add('hidden'); nameEl.value=''; dobEl.value=''; }
+
+  if (trigger) trigger.onclick = openAdder;
+  if (cancel)  cancel.onclick  = closeAdder;
+  if (bg)      bg.onclick      = closeAdder;
+
+  if (confirm) confirm.onclick = function() {
+    var name = nameEl.value.trim();
+    var dobVal = dobEl.value;
+    if (!name || !dobVal) return;
+    var parts = dobVal.split('-');
+    var dob = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    if (isNaN(dob.getTime())) return;
+    var idx = CUSTOM_BASE_IDX + CUSTOM_PEOPLE.length;
+    CUSTOM_PEOPLE.push({ p:{ name:name, dob:dob, c:adderSelColor }, idx:idx });
+    closeAdder();
+    rebuildAll();
+    checkBirthdayConfetti(new Date());
+  };
+})();
 
 // ─── INIT ───
 rebuildCards();
