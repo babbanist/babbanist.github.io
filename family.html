@@ -384,6 +384,13 @@ body::before { content:''; position:fixed; inset:0; background:radial-gradient(e
 .adder-colors { display:flex; gap:8px; flex-wrap:wrap; }
 .adder-color { width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:border-color .15s,transform .15s; }
 .adder-color.sel { border-color:var(--white); transform:scale(1.2); }
+.adder-avatars { display:flex; gap:8px; flex-wrap:wrap; }
+.adder-avatar { width:34px; height:34px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:border-color .15s,transform .15s; overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--card); }
+.adder-avatar svg { width:100%; height:100%; display:block; }
+.adder-avatar.sel { border-color:var(--white); transform:scale(1.12); }
+.adder-avatar-none { font-size:9px; color:var(--muted2); letter-spacing:.04em; text-transform:uppercase; }
+.card-avatar { width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0; }
+.card-avatar svg { width:100%; height:100%; display:block; }
 .adder-footer { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
 .adder-btn-sec { background:none; border:1px solid var(--border-light); border-radius:6px; color:var(--muted); font-family:var(--ff-mono); font-size:11px; padding:8px 16px; cursor:pointer; transition:color .15s,border-color .15s; }
 .adder-btn-sec:hover { color:var(--text); border-color:var(--muted); }
@@ -1226,7 +1233,7 @@ function rebuildCards() {
     card.innerHTML =
       '<div class="card-topline" style="background:linear-gradient(90deg,transparent 10%,' + p.c + ' 50%,transparent 90%)"></div>'
       + '<button class="card-hide-btn" title="' + p.name + ' verbergen">\u2715</button>'
-      + '<div class="card-header"><div class="card-name">' + p.name + '</div>'
+      + '<div class="card-header"><div style="display:flex;align-items:center;gap:8px">' + (p.avatar ? '<div class="card-avatar">' + (avatarSvgById(p.avatar) || '') + '</div>' : '') + '<div class="card-name">' + p.name + '</div></div>'
       + '<div class="card-icons"><span class="card-zodiac">' + zodiacSign(p.dob) + '</span><span class="card-cn">' + cn.emoji + '</span></div></div>'
       + '<div class="card-dob">' + nlDate(p.dob) + '</div>'
       + '<div class="card-weekday">Geboren op ' + wdBorn + ' \u00b7 <span>' + age + '</span> jaar \u00b7 ' + zodiacName(p.dob) + '</div>'
@@ -2109,6 +2116,29 @@ document.addEventListener('keydown',function(e){
 var ADDER_COLORS = ['#e867a0','#e8d44a','#a267e8','#e87c30','#4ab0e8','#c867e8','#e84040','#4ae880','#1a6b3a','#5b4aad','#f0c060','#60c0f0','#f06060','#60f080'];
 var adderSelColor = ADDER_COLORS[0];
 
+// Growing library of selectable mini avatars, one new design added over time.
+var AVATARS = [
+  {
+    id: 'disco-avocado',
+    name: 'Disco Avocado',
+    svg: '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">'
+      + '<circle cx="32" cy="32" r="32" fill="#241b35"/>'
+      + '<path d="M12 16 l2 4 4 2 -4 2 -2 4 -2 -4 -4 -2 4 -2z" fill="#ffd34d"/>'
+      + '<path d="M50 13 l1.6 3.2 3.2 1.6 -3.2 1.6 -1.6 3.2 -1.6 -3.2 -3.2 -1.6 3.2 -1.6z" fill="#ff6fb0"/>'
+      + '<path d="M51 45 l1.3 2.6 2.6 1.3 -2.6 1.3 -1.3 2.6 -1.3 -2.6 -2.6 -1.3 2.6 -1.3z" fill="#4fd1ff"/>'
+      + '<ellipse cx="32" cy="37" rx="15" ry="19" fill="#6fbf4f" stroke="#3f8a2f" stroke-width="2"/>'
+      + '<ellipse cx="27" cy="28" rx="5" ry="7" fill="#8fd16c" opacity="0.55"/>'
+      + '<circle cx="32" cy="41" r="7.5" fill="#8a5a33" stroke="#6e4426" stroke-width="1.2"/>'
+      + '<rect x="18" y="38" width="28" height="3" rx="1.5" fill="#111"/>'
+      + '<circle cx="25" cy="40.5" r="6" fill="#111"/>'
+      + '<circle cx="39" cy="40.5" r="6" fill="#111"/>'
+      + '<circle cx="23.3" cy="38.6" r="1.6" fill="#fff" opacity="0.85"/>'
+      + '<circle cx="37.3" cy="38.6" r="1.6" fill="#fff" opacity="0.85"/>'
+      + '</svg>'
+  }
+];
+var adderSelAvatar = null;
+
 function initAdder() {
   var wrap    = document.getElementById('adder-modal-wrap');
   var trigger = document.getElementById('adder-trigger');
@@ -2118,6 +2148,7 @@ function initAdder() {
   var nameEl  = document.getElementById('adder-name');
   var dobEl   = document.getElementById('adder-dob');
   var colorsEl= document.getElementById('adder-colors');
+  var avatarsEl = document.getElementById('adder-avatars');
   if (!wrap || !trigger || !colorsEl) return;
 
   for (var ci = 0; ci < ADDER_COLORS.length; ci++) {
@@ -2134,6 +2165,33 @@ function initAdder() {
     })(ADDER_COLORS[ci]);
   }
 
+  if (avatarsEl) {
+    var noneSw = document.createElement('div');
+    noneSw.className = 'adder-avatar sel';
+    noneSw.innerHTML = '<span class="adder-avatar-none">geen</span>';
+    noneSw.onclick = function() {
+      adderSelAvatar = null;
+      avatarsEl.querySelectorAll('.adder-avatar').forEach(function(el){ el.classList.remove('sel'); });
+      noneSw.classList.add('sel');
+    };
+    avatarsEl.appendChild(noneSw);
+
+    for (var ai = 0; ai < AVATARS.length; ai++) {
+      (function(av) {
+        var sw = document.createElement('div');
+        sw.className = 'adder-avatar';
+        sw.title = av.name;
+        sw.innerHTML = av.svg;
+        sw.onclick = function() {
+          adderSelAvatar = av.id;
+          avatarsEl.querySelectorAll('.adder-avatar').forEach(function(el){ el.classList.remove('sel'); });
+          sw.classList.add('sel');
+        };
+        avatarsEl.appendChild(sw);
+      })(AVATARS[ai]);
+    }
+  }
+
   function openAdder()  { wrap.classList.remove('hidden'); if (nameEl) nameEl.focus(); }
   function closeAdder() { wrap.classList.add('hidden'); if (nameEl) nameEl.value=''; if (dobEl) dobEl.value=''; }
 
@@ -2148,13 +2206,18 @@ function initAdder() {
     var dob = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     if (isNaN(dob.getTime())) return;
     var idx = CUSTOM_BASE_IDX + CUSTOM_PEOPLE.length;
-    CUSTOM_PEOPLE.push({ p:{ name:name, dob:dob, c:adderSelColor }, idx:idx });
+    CUSTOM_PEOPLE.push({ p:{ name:name, dob:dob, c:adderSelColor, avatar:adderSelAvatar }, idx:idx });
     closeAdder();
     rebuildAll();
     checkBirthdayConfetti(new Date());
   };
 }
 window.addEventListener('load', initAdder);
+
+function avatarSvgById(id) {
+  for (var i = 0; i < AVATARS.length; i++) if (AVATARS[i].id === id) return AVATARS[i].svg;
+  return null;
+}
 
 // ─── INIT ───
 rebuildCards();
@@ -2184,6 +2247,10 @@ checkBirthdayConfetti(new Date());
     <div class="adder-field">
       <label class="adder-lbl">Kleur</label>
       <div class="adder-colors" id="adder-colors"></div>
+    </div>
+    <div class="adder-field">
+      <label class="adder-lbl">Avatar</label>
+      <div class="adder-avatars" id="adder-avatars"></div>
     </div>
     <div class="adder-footer">
       <button class="adder-btn-sec" id="adder-cancel">Annuleren</button>
